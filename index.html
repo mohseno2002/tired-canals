@@ -493,7 +493,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.2';
+var APP_VER = 'v5.3';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -773,6 +773,113 @@ function diagnose(c){
     } else if(c.f5_drain_near==='yes'){
       add('drain_feed','ok','مصرف مجاور — إمكانية تغذية ' + (c.f5_drain_feed==='available'?'متاحة':'محدودة') + ' (خيار احتياطى)');
     }
+  }
+
+  // ============================================================
+  // التحليلات الهيدروليكية المتقدمة — تستغل البيانات الرقمية التفصيلية
+  // (نموذج 2 المناسيب، الجداول الديناميكية) بدقة هندسية.
+  // كل تحليل يضيف تشخيصاً مربوطاً بحل، ويوضّح الأرقام والمبدأ.
+  // ============================================================
+  var parseJSON = function(s){ try{ return JSON.parse(s||'[]'); }catch(e){ return []; } };
+
+  // ---- 1) خطر الغمر / الحرية المائية (Freeboard) ----
+  // المبدأ: منسوب المياه الأقصى يجب أن يقل عن منسوب الجسر بـ ≥ 0.5 م.
+  var wmax = num(c.f2_water_max);
+  if(wmax>0){
+    var brR = num(c.f2_bridge_r), brL = num(c.f2_bridge_l);
+    var bridgeLvls = [brR, brL].filter(function(x){return x>0;});
+    if(bridgeLvls.length){
+      var minBridge = Math.min.apply(null, bridgeLvls);
+      var fb = minBridge - wmax;                       // الحرية المائية الفعلية
+      if(fb < 0.5){
+        var sevFb = (fb <= 0) ? 'crit' : (fb < 0.25 ? 'bad' : 'warn');
+        var rise = (0.5 - fb);                         // التعلية المطلوبة لاستعادة 0.5م
+        add('bridges', sevFb, 'حرية مائية غير آمنة: منسوب المياه الأقصى ' + round2(wmax) +
+          ' م وأدنى جسر ' + round2(minBridge) + ' م (هامش ' + round2(fb) + ' م < 0.5). يلزم تعلية الجسور ~' + round2(rise) + ' م أو خفض منسوب التشغيل');
+      }
+    }
+    // غمر الأرض الزراعية: منسوب المياه أعلى من أقل أرض زراعية
+    var lndR = num(c.f2_land_r), lndL = num(c.f2_land_l);
+    var lands = [lndR, lndL].filter(function(x){return x>0;});
+    if(lands.length){
+      var minLand = Math.min.apply(null, lands);
+      if(wmax >= minLand){
+        add('seepage','bad','منسوب المياه الأقصى ' + round2(wmax) + ' م يبلغ/يتجاوز أقل أرض زراعية ' + round2(minLand) + ' م — خطر غمر ونزّ على الأراضى المجاورة');
+      }
+    }
+  }
+
+  // ---- 2) معدل الإطماء وفقد السعة (Siltation rate) ----
+  // المبدأ: فرق منسوب القاع التصميمى عن الفعلى = ارتفاع الإطماء.
+  // فقد >20% من العمق التصميمى = حرج.
+  var bedDes = num(c.f2_bedlvl), bedAct = num(c.f2_bedlvl_field);
+  var desY = num(c.des_y) || num(c.hyd_y);
+  if(bedDes!==0 && bedAct!==0 && bedAct > bedDes){      // القاع ارتفع = إطماء
+    var siltH = bedAct - bedDes;
+    if(desY>0){
+      var lossPct = (siltH/desY)*100;
+      if(lossPct >= 20){
+        add('siltation', lossPct>=40?'bad':'warn',
+          'إطماء يرفع القاع ' + round2(siltH) + ' م = فقد ' + round0(lossPct) + '% من العمق التصميمى (' + round2(desY) + ' م) — يتجاوز حد الـ20%');
+      }
+    } else {
+      add('siltation','warn','القاع الفعلى أعلى من التصميمى بـ ' + round2(siltH) + ' م (إطماء مرصود)');
+    }
+  }
+
+  // ---- 3) فجوة التوزيع (Duty gap): المقنن الفعلى مقابل الأورنيك ----
+  var dutyAct = num(c.f2_duty_actual), dutyOrn = num(c.f2_duty_ornik);
+  if(dutyAct>0 && dutyOrn>0){
+    var dgap = (dutyOrn - dutyAct)/dutyOrn;            // نقص الفعلى عن المستحق
+    if(dgap > 0.15){
+      add('operational', dgap>0.30?'bad':'warn',
+        'فجوة توزيع: المقنن الفعلى ' + round1(dutyAct) + ' أقل من الأورنيك ' + round1(dutyOrn) + ' بنسبة ' + round0(dgap*100) + '% — الترعة لا توصّل حصة الفدان المقررة');
+    }
+  }
+
+  // ---- 4) الفاقد الهيدروليكى عبر المنشآت (Head loss) ----
+  // المبدأ: فرق منسوب المياه أمام/خلف منشأ > 0.30 م = اختناق.
+  var checkHeadLoss = function(rows, label){
+    var worst = 0, worstKm = '';
+    rows.forEach(function(r){
+      var hf = parseFloat(r.wl_front), hb = parseFloat(r.wl_back);
+      if(!isNaN(hf) && !isNaN(hb)){
+        var dh = hf - hb;
+        if(dh > worst){ worst = dh; worstKm = r.km||''; }
+      }
+    });
+    if(worst > 0.30){
+      add('structure_hyd', worst>0.60?'bad':'warn',
+        'فاقد هيدروليكى عبر ' + label + (worstKm?(' عند ك' + worstKm):'') + ' = ' + round2(worst) + ' م (> 0.30) — اختناق يرفع المنسوب أعلى المنشأ');
+    }
+  };
+  checkHeadLoss(parseJSON(c.f4_covers), 'تغطية');
+  checkHeadLoss(parseJSON(c.f5_culverts), 'سحارة');
+
+  // ---- 5) تأخّر تطهير الصاولات وشبك الحجز (> 90 يوم) ----
+  var checkClean = function(rows, label, sol){
+    var maxP = 0;
+    rows.forEach(function(r){ var p=parseFloat(r.period); if(!isNaN(p) && p>maxP) maxP=p; });
+    if(maxP > 90){
+      add(sol, maxP>180?'bad':'warn',
+        label + ': فترة التطهير الدورى ' + round0(maxP) + ' يوم تتجاوز الحد الآمن (90 يوم) — تراكم حشائش/إطماء أمام المنشأ');
+    }
+  };
+  checkClean(parseJSON(c.f3_sawalat), 'صاولات حجز الحشائش', 'weeds');
+  checkClean(parseJSON(c.f3_nets), 'شبك حجز الحشائش', 'weeds');
+
+  // ---- 6) كثافة المنشآت الحرجة (مؤشر تدهور إنشائى شامل) ----
+  var renewCount = 0, allStructRows = [].concat(
+    parseJSON(c.f4_covers), parseJSON(c.f4_pipebridges), parseJSON(c.f4_protects),
+    parseJSON(c.f5_openbridges), parseJSON(c.f5_culverts));
+  allStructRows.forEach(function(r){ if(r.state==='renew') renewCount++; });
+  if(renewCount >= 3){
+    add('structure_struct','bad','تدهور إنشائى شامل: ' + renewCount + ' منشأ يحتاج إحلال وتجديد على الترعة');
+  }
+
+  // ---- 7) تحليل المصب والتصريف ----
+  if(c.f8_outfall_hold==='hold' && (c.f7_outfall!=='free')){
+    add('outfall','warn','منشأ المصب يحجز المياه — قد يرفع المنسوب أعلى المجرى ويعوق التصريف');
   }
 
   return found;
@@ -3447,7 +3554,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-2';
+  var SW_VER = 'tired-canals-v5-3';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
