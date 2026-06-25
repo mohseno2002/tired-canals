@@ -271,8 +271,8 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <input id="cloud-url" type="text" placeholder="https://script.google.com/macros/s/.../exec">
       <label class="fl">مفتاح الأمان (API key)</label>
       <input id="cloud-keyfield" type="text" placeholder="نفس المفتاح فى كود Apps Script">
-      <label class="fl">المحافظة/الإدارة (اتركها فارغة لرؤية الكل)</label>
-      <input id="cloud-admin" type="text" placeholder="مثال: إدارة رى أوسيم">
+      <label class="fl">المحافظة/الإدارة (اختر من القائمة)</label>
+      <select id="cloud-admin" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px"></select>
       <label class="fl">اسمك (يُسجَّل مع كل تعديل)</label>
       <input id="cloud-user" type="text" placeholder="اسم المسؤول">
       <label class="fl" style="display:flex;align-items:center;gap:8px;margin-top:8px">
@@ -493,7 +493,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.1';
+var APP_VER = 'v5.2';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -676,10 +676,27 @@ function renderCloudStatus(){
     el.style.color = 'var(--warn)';
   }
 }
+/* قائمة الإدارات المعروفة (احتياطية للأجهزة التى لم تجلب البيانات بعد) */
+var KNOWN_ADMINS = ['الادارة العامة لرى أسيوط','الادارة العامة لرى السلام غرب','الادارة العامة لرى الغربية','الادارة العامة لرى النوبارية','الادارة العامة لرى غرب قنا','الادارة العامة لرى غرب كفر الشيخ','الادارة العامة لري الصالحية','الادارة العامة لري شرق الدقهلية','الادارة العامة لري شرق الشرقية','الادارة العامة لري غرب المنيا','الادارة العامة للموارد المائية والرى بالبحيرة','الادارة العامة للموارد المائية والري باسوان','الإدارة العامة لرى شرق قنا','الإدارة العامة لري سوهاج','الإدارة العامة لري شرق كفر الشيخ','الإدارة العامة لري غرب الدقهلية','الاسماعيلية','القليوبية','رى بنى سويف','ري النصر','ري شرق المنيا','ري غرب الشرقية','ري غرب الفيوم','شرق الفيوم'];
+
 function fillCloudForm(){
   var set=function(id,v){ var e=document.getElementById(id); if(e!=null) e.value=v||''; };
   set('cloud-url', cloudCfg.url); set('cloud-keyfield', cloudCfg.key);
-  set('cloud-admin', cloudCfg.admin); set('cloud-user', cloudCfg.user);
+  // build admin dropdown: من البيانات إن وُجدت، وإلا القائمة المعروفة
+  var sel = document.getElementById('cloud-admin');
+  if(sel){
+    var admins = {};
+    (DB.canals||[]).forEach(function(c){ var a=(c.f8_admin||'').trim(); if(a) admins[a]=1; });
+    var list = Object.keys(admins);
+    if(list.length===0) list = KNOWN_ADMINS.slice();   // جهاز فارغ → استخدم المعروفة
+    list.sort();
+    var opts = '<option value="">— كل الإدارات (مدير) —</option>';
+    list.forEach(function(a){ opts += '<option value="'+esc(a)+'">'+esc(a)+'</option>'; });
+    if(cloudCfg.admin && list.indexOf(cloudCfg.admin)<0){ opts += '<option value="'+esc(cloudCfg.admin)+'">'+esc(cloudCfg.admin)+'</option>'; }
+    sel.innerHTML = opts;
+    sel.value = cloudCfg.admin || '';
+  }
+  set('cloud-user', cloudCfg.user);
   var a=document.getElementById('cloud-auto'); if(a) a.checked=!!cloudCfg.auto;
   renderCloudStatus();
 }
@@ -3430,7 +3447,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-1';
+  var SW_VER = 'tired-canals-v5-2';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
