@@ -90,6 +90,9 @@ body{
 .btn-out{background:#fff;color:var(--navy);border:1.5px solid var(--navy)}
 .btn-danger{background:var(--bad);color:#fff}
 .btn-soft{background:var(--cyan-soft,#e6f3f7);color:var(--navy);border:1px solid var(--cyan,#2a9fc4)}
+.ai-msg{margin-bottom:8px;padding:8px 11px;border-radius:10px;line-height:1.7;max-width:90%}
+.ai-user{background:var(--navy);color:#fff;margin-right:auto;margin-left:0;border-bottom-right-radius:3px}
+.ai-bot{background:#fff;color:#1a2a35;border:1px solid var(--line);margin-left:auto;margin-right:0;border-bottom-left-radius:3px}
 .btn-sm{padding:7px 12px;font-size:12.5px;width:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
@@ -275,6 +278,16 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 <!-- ========== VIEW: REPORTS ========== -->
 <div class="view" id="v-rep">
   <div class="wrap">
+    <div class="sec-title">المساعد الذكى</div>
+    <div class="card"><div class="card-b">
+      <div id="ai-chat" style="min-height:80px;max-height:320px;overflow-y:auto;background:#f4f7fa;border-radius:10px;padding:10px;margin-bottom:8px;font-size:13.5px"><div class="note" style="margin:0">اسأل عن ترعك: مثال «كام ترعة حرجة؟» أو «رتّب أعلى 5 ترع أولوية» أو «اقترح حلول لترعة بها استبحار».</div></div>
+      <div style="display:flex;gap:6px">
+        <input id="ai-input" type="text" placeholder="اكتب سؤالك..." style="flex:1" onkeydown="if(event.key==='Enter')aiAsk()">
+        <button id="ai-send" class="btn btn-pri" style="width:auto;padding:9px 16px" onclick="aiAsk()">إرسال</button>
+      </div>
+      <div class="note" style="margin:6px 0 0">يعمل عبر المزامنة السحابية. يُرسل ملخص بيانات إدارتك لتحليلها. لا يُرسل شيئاً إن لم تُضبط السحابة.</div>
+    </div></div>
+
     <div class="sec-title">المزامنة السحابية (جوجل شيت)</div>
     <div class="card"><div class="card-b">
       <div id="cloud-status" class="note" style="margin-top:0;margin-bottom:10px"></div>
@@ -510,7 +523,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v6.0';
+var APP_VER = 'v6.1';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -757,6 +770,72 @@ function renderCloudStatus(){
 }
 /* قائمة الإدارات المعروفة (احتياطية للأجهزة التى لم تجلب البيانات بعد) */
 var KNOWN_ADMINS = ['الادارة العامة لرى أسيوط','الادارة العامة لرى السلام غرب','الادارة العامة لرى الغربية','الادارة العامة لرى النوبارية','الادارة العامة لرى غرب قنا','الادارة العامة لرى غرب كفر الشيخ','الادارة العامة لري الصالحية','الادارة العامة لري شرق الدقهلية','الادارة العامة لري شرق الشرقية','الادارة العامة لري غرب المنيا','الادارة العامة للموارد المائية والرى بالبحيرة','الادارة العامة للموارد المائية والري باسوان','الإدارة العامة لرى شرق قنا','الإدارة العامة لري سوهاج','الإدارة العامة لري شرق كفر الشيخ','الإدارة العامة لري غرب الدقهلية','الاسماعيلية','القليوبية','رى بنى سويف','ري النصر','ري شرق المنيا','ري غرب الشرقية','ري غرب الفيوم','شرق الفيوم'];
+
+/* ============================================================
+   المساعد الذكى (Gemini عبر Apps Script — المفتاح مخفى بالخادم)
+   ============================================================ */
+var aiHistory = [];
+/* يبنى ملخصاً رقمياً للبيانات لإرساله كسياق (يحترم فلتر المحافظة) */
+function buildAIContext(){
+  var list = DB.canals || [];
+  if(cloudCfg.admin) list = list.filter(function(c){ return (c.f8_admin||'')===cloudCfg.admin; });
+  if(!list.length) return 'لا توجد ترع.';
+  var lines = [];
+  lines.push('عدد الترع: ' + list.length);
+  // تجميع حسب الشدة
+  var sev = {crit:0,bad:0,warn:0,ok:0};
+  var totalCost = 0, totalZam = 0;
+  list.forEach(function(c){
+    var s = c._sev || overallSeverity(c);
+    if(sev[s]!=null) sev[s]++;
+    totalCost += (c._cost||estimateCost(c)||0);
+    totalZam += num(c.f8_zam);
+  });
+  lines.push('حرجة: '+sev.crit+' · سيئة: '+sev.bad+' · متوسطة: '+sev.warn+' · جيدة: '+sev.ok);
+  lines.push('إجمالى التكلفة التقديرية: '+Math.round(totalCost)+' ألف جنيه');
+  lines.push('إجمالى الزمام: '+Math.round(totalZam)+' فدان');
+  // أعلى 15 ترعة أولوية (اسم/إدارة/شدة/تكلفة/مشاكل)
+  var sorted = list.slice().sort(function(a,b){ return (b._pri||priorityIndex(b))-(a._pri||priorityIndex(a)); });
+  lines.push('\nأهم الترع (مرتبة بالأولوية):');
+  sorted.slice(0,15).forEach(function(c,i){
+    var diag = (c._diag||diagnose(c)).map(function(d){return d.label;}).join('، ');
+    lines.push((i+1)+'. '+(c.f8_name||'بدون اسم')+' — '+(c.f8_admin||'')+' — شدة: '+(SEV_LABEL[c._sev||overallSeverity(c)]||'')+' — تكلفة: '+Math.round(c._cost||estimateCost(c)||0)+' ألف ج — مشاكل: '+(diag||'لا يوجد'));
+  });
+  return lines.join('\n');
+}
+function aiAsk(){
+  var inp = document.getElementById('ai-input');
+  var box = document.getElementById('ai-chat');
+  var btn = document.getElementById('ai-send');
+  if(!inp||!box) return;
+  var q = inp.value.trim();
+  if(!q) return;
+  if(!cloudConfigured()){ toast('اضبط رابط السحابة أولاً (المساعد يعمل عبره)'); return; }
+  box.innerHTML += '<div class="ai-msg ai-user">'+esc(q)+'</div>';
+  inp.value = '';
+  btn.disabled = true; btn.textContent = 'جارٍ التفكير...';
+  var loadId = 'ai-load-'+Date.now();
+  box.innerHTML += '<div class="ai-msg ai-bot" id="'+loadId+'">… جارٍ تحليل البيانات والرد</div>';
+  box.scrollTop = box.scrollHeight;
+  var ctx = buildAIContext();
+  fetch(cloudCfg.url, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body: JSON.stringify({ key:cloudCfg.key, action:'ai', question:q, context:ctx })
+  }).then(function(r){ return r.json(); }).then(function(res){
+    var el = document.getElementById(loadId);
+    if(res && res.ok && res.answer){
+      el.innerHTML = esc(res.answer).replace(/\n/g,'<br>');
+    } else {
+      el.innerHTML = '⚠ ' + esc((res&&res.error)||'تعذّر الرد. تأكد من ضبط مفتاح Gemini فى الخادم.');
+    }
+    btn.disabled=false; btn.textContent='إرسال';
+    box.scrollTop = box.scrollHeight;
+  }).catch(function(err){
+    var el=document.getElementById(loadId); if(el) el.innerHTML='⚠ خطأ شبكة: '+esc(err.message);
+    btn.disabled=false; btn.textContent='إرسال';
+  });
+}
 
 function fillCloudForm(){
   var set=function(id,v){ var e=document.getElementById(id); if(e!=null) e.value=v||''; };
@@ -4029,7 +4108,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v6-0';
+  var SW_VER = 'tired-canals-v6-1';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
