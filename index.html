@@ -301,6 +301,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
     <div class="sec-title">التقارير والتصدير</div>
     <div class="card"><div class="card-b">
       <div id="data-status" class="note" style="margin-top:0;margin-bottom:10px"></div>
+      <button class="btn btn-pri" onclick="executiveReport()">📊 التقرير التنفيذى الشامل (للقيادات)</button>
+      <div class="note">تقرير رسمى للجمهورية: الملخص التنفيذى، المؤشرات الفنية، توزيع الإدارات، أكثر المشاكل، وأعلى 15 أولوية — جاهز للطباعة/PDF.</div>
+      <div style="height:8px"></div>
       <button class="btn btn-pri" onclick="exportExcel()">⬇ تصدير Excel احترافى (مرتب بالأولوية)</button>
       <div style="height:8px"></div>
       <button class="btn btn-out" onclick="exportCSV()">⬇ تصدير CSV</button>
@@ -507,7 +510,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.6';
+var APP_VER = 'v5.8';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -1640,6 +1643,139 @@ function printReport(id){
 }
 
 /* ============================================================
+   التقرير التنفيذى الشامل — على مستوى الجمهورية (للقيادات).
+   ملخص + توزيع الإدارات + الأولويات + الميزانية + المؤشرات الفنية.
+   يفتح فى نافذة جاهزة للطباعة/حفظ PDF بهوية رسمية.
+   ============================================================ */
+function executiveReport(){
+  var canals = DB.canals;
+  if(!canals.length){ toast('لا توجد بيانات'); return; }
+  var cc = canalCounts(canals);
+  var totalCost = canals.reduce(function(a,c){return a+((c._cost&&c._cost.total)?c._cost.total:0);},0);
+  var totalZam = affectedZam(canals);
+  var tiredLen = canals.reduce(function(a,c){return a+normLenKm(c.f8_tired_len);},0);
+  var dist = {crit:0,bad:0,warn:0,ok:0};
+  canals.forEach(function(c){ dist[c._sev]=(dist[c._sev]||0)+1; });
+
+  // problem ranking
+  var counts = {};
+  canals.forEach(function(c){ (c._diag||[]).forEach(function(d){ counts[d.key]=(counts[d.key]||0)+1; }); });
+  var probArr = Object.keys(counts).map(function(k){return {k:k,n:counts[k]};}).sort(function(a,b){return b.n-a.n;});
+
+  // admin groups (sorted by cost)
+  var admins = buildAdminReport();
+
+  // top priority canals
+  var topPri = canals.slice().sort(function(a,b){return (b._pri?b._pri.total:0)-(a._pri?a._pri.total:0);}).slice(0,15);
+
+  // technical indicators
+  var ti = {flood:0,silt:0,dutygap:0,headloss:0,cleandelay:0,structdecay:0,outfall:0};
+  canals.forEach(function(c){ (c._diag||[]).forEach(function(d){ var w=d.why||'';
+    if(w.indexOf('حرية مائية')>=0||w.indexOf('خطر غمر')>=0) ti.flood++;
+    else if(w.indexOf('إطماء يرفع القاع')>=0) ti.silt++;
+    else if(w.indexOf('فجوة توزيع')>=0) ti.dutygap++;
+    else if(w.indexOf('فاقد هيدروليكى عبر')>=0) ti.headloss++;
+    else if(w.indexOf('فترة التطهير')>=0) ti.cleandelay++;
+    else if(w.indexOf('تدهور إنشائى شامل')>=0) ti.structdecay++;
+    else if(w.indexOf('المصب يحجز')>=0) ti.outfall++;
+  }); });
+
+  var w = window.open('', '_blank');
+  var now = new Date();
+  var dateStr = now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate();
+  var d = '<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+  d += '<title>التقرير التنفيذى — الترع المتعبة</title>';
+  d += '<style>';
+  d += '@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap");';
+  d += '*{margin:0;padding:0;box-sizing:border-box}';
+  d += 'body{font-family:Cairo,sans-serif;color:#1a2630;padding:24px;background:#fff;line-height:1.6}';
+  d += '.head{text-align:center;border-bottom:3px solid #0e3b5c;padding-bottom:14px;margin-bottom:20px}';
+  d += '.org{font-size:13px;color:#56636f;font-weight:600}';
+  d += 'h1{font-size:22px;color:#0e3b5c;margin:6px 0}';
+  d += '.sub{font-size:12px;color:#8a96a2}';
+  d += 'h2{font-size:16px;color:#0e3b5c;margin:22px 0 10px;padding-right:10px;border-right:4px solid #c9a55c}';
+  d += '.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:14px 0}';
+  d += '.kpi{border:1px solid #d8dde3;border-radius:10px;padding:14px;text-align:center}';
+  d += '.kpi .big{font-size:24px;font-weight:800;color:#0e3b5c}';
+  d += '.kpi .acc{color:#c9a55c}';
+  d += '.kpi .lbl{font-size:11px;color:#56636f;margin-top:4px}';
+  d += 'table{width:100%;border-collapse:collapse;margin:10px 0;font-size:12px}';
+  d += 'th,td{border:1px solid #d8dde3;padding:7px 9px;text-align:right}';
+  d += 'th{background:#0e3b5c;color:#fff;font-weight:700}';
+  d += 'tr:nth-child(even){background:#f7f9fb}';
+  d += '.bar{height:14px;background:#eef1f4;border-radius:7px;overflow:hidden;display:inline-block;width:100px;vertical-align:middle}';
+  d += '.bar>i{display:block;height:100%;background:#0e3b5c}';
+  d += '.crit{color:#b3261e;font-weight:700}.warnc{color:#c9821a;font-weight:700}';
+  d += '.foot{margin-top:24px;border-top:2px solid #0e3b5c;padding-top:10px;font-size:11px;color:#8a96a2;text-align:center}';
+  d += '@media print{body{padding:8px}h2{page-break-after:avoid}table{page-break-inside:auto}tr{page-break-inside:avoid}}';
+  d += '.noprint{text-align:center;margin:20px 0}';
+  d += '.noprint button{background:#0e3b5c;color:#fff;border:none;padding:12px 28px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer}';
+  d += '@media print{.noprint{display:none}}';
+  d += '</style></head><body>';
+
+  // header
+  d += '<div class="head"><div class="org">وزارة الموارد المائية والرى — الإدارة المركزية للموارد المائية والرى</div>';
+  d += '<h1>التقرير التنفيذى الشامل — الترع المتعبة على مستوى الجمهورية</h1>';
+  d += '<div class="sub">تقرير آلى من قاعدة بيانات الترع المتعبة · تاريخ الإصدار '+dateStr+'</div></div>';
+
+  // executive summary KPIs
+  d += '<h2>الملخص التنفيذى</h2>';
+  d += '<div class="kpis">';
+  d += '<div class="kpi"><div class="big acc">'+fmtEGP(totalCost)+'</div><div class="lbl">إجمالى التكلفة التقديرية للتأهيل</div></div>';
+  d += '<div class="kpi"><div class="big">'+fmt(round0(totalZam))+'</div><div class="lbl">الزمام المتأثر فعلاً (فدان)</div></div>';
+  d += '<div class="kpi"><div class="big">'+cc.units+'</div><div class="lbl">ترعة فعلية ('+cc.reaches+' حبس متعب)</div></div>';
+  d += '<div class="kpi"><div class="big crit">'+dist.crit+'</div><div class="lbl">ترعة بحالة حرجة</div></div>';
+  d += '</div>';
+  d += '<p style="font-size:12.5px;color:#3a4753">تغطى قاعدة البيانات <b>'+admins.length+'</b> إدارة على مستوى الجمهورية، بإجمالى طول متعب <b>'+round1(tiredLen)+' كم</b>. توزيع شدة الحالة: <span class="crit">'+dist.crit+' حرجة</span>، '+dist.bad+' سيئة، '+dist.warn+' متوسطة، '+dist.ok+' جيدة.</p>';
+
+  // technical indicators (if any)
+  var tiAny = ti.flood||ti.silt||ti.dutygap||ti.headloss||ti.cleandelay||ti.structdecay||ti.outfall;
+  if(tiAny){
+    d += '<h2>المؤشرات الفنية (تحليلات هيدروليكية)</h2><table>';
+    d += '<tr><th>المؤشر</th><th>عدد الترع المصابة</th></tr>';
+    var tiRows = [['خطر غمر / حرية مائية غير آمنة',ti.flood],['إطماء يتجاوز 20% من العمق',ti.silt],['فجوة توزيع (نقص المقنن الفعلى)',ti.dutygap],['فاقد هيدروليكى عبر منشآت',ti.headloss],['تأخّر تطهير الصاولات/الشبك',ti.cleandelay],['تدهور إنشائى شامل',ti.structdecay],['مصب يحجز/يعوق التصريف',ti.outfall]];
+    tiRows.forEach(function(r){ if(r[1]>0) d += '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>'; });
+    d += '</table>';
+  }
+
+  // admin distribution table
+  d += '<h2>توزيع الترع المتعبة بالإدارات</h2><table>';
+  d += '<tr><th>الإدارة</th><th>الأحباس</th><th class="crit">حرجة</th><th>الطول المتعب (كم)</th><th>الزمام المتأثر</th><th>التكلفة التقديرية</th></tr>';
+  admins.forEach(function(x){
+    d += '<tr><td>'+esc(x.admin)+'</td><td>'+x.d.reaches+'</td><td class="crit">'+x.d.crit+'</td><td>'+round1(x.d.tiredLen)+'</td><td>'+fmt(round0(x.d.affZam))+'</td><td>'+fmtEGP(x.d.cost)+'</td></tr>';
+  });
+  d += '</table>';
+
+  // most frequent problems
+  if(probArr.length){
+    var maxP = probArr[0].n;
+    d += '<h2>أكثر أنواع المشاكل تكراراً</h2><table>';
+    d += '<tr><th>نوع المشكلة</th><th>العدد</th><th>النسبة</th></tr>';
+    probArr.slice(0,10).forEach(function(x){
+      var lib = SOLUTIONS[x.k];
+      d += '<tr><td>'+(lib?lib.label:x.k)+'</td><td>'+x.n+'</td><td><span class="bar"><i style="width:'+(x.n/maxP*100)+'%"></i></span></td></tr>';
+    });
+    d += '</table>';
+  }
+
+  // top priority canals for intervention
+  d += '<h2>أعلى 15 ترعة أولوية للتدخل (مؤشر مرجّح /100)</h2><table>';
+  d += '<tr><th>#</th><th>الترعة</th><th>الإدارة</th><th>الشدة</th><th>الأولوية</th><th>التكلفة</th></tr>';
+  topPri.forEach(function(c, i){
+    var sevTxt = SEV_LABEL[c._sev]||'';
+    var sevCls = c._sev==='crit'?'crit':(c._sev==='bad'?'warnc':'');
+    d += '<tr><td>'+(i+1)+'</td><td>'+esc(c.f8_name)+'</td><td>'+esc(c.f8_admin||'')+'</td><td class="'+sevCls+'">'+sevTxt+'</td><td><b>'+(c._pri?c._pri.total:0)+'</b></td><td>'+(c._cost&&c._cost.total>0?fmtEGP(c._cost.total):'—')+'</td></tr>';
+  });
+  d += '</table>';
+
+  d += '<div class="foot">تقرير آلى من تطبيق سجل الترع المتعبة — وزارة الموارد المائية والرى. الأرقام تقديرية للاسترشاد فى ترتيب الأولويات والتخطيط، وتُراجَع فنياً قبل اعتماد التنفيذ.</div>';
+  d += '<div class="noprint"><button onclick="window.print()">🖨 طباعة / حفظ PDF</button></div>';
+  d += '</body></html>';
+  w.document.write(d);
+  w.document.close();
+}
+
+/* ============================================================
    WAVE 4: ready design modules + admin-grouped report
    ============================================================ */
 
@@ -2335,6 +2471,9 @@ function refreshAll(){
     c._pri = priorityIndex(c);
   });
   renderDash(); renderList(); renderReport();
+  // حدّث تبويب الخطة أيضاً إن كان مفتوحاً (مثلاً بعد مزامنة سحابية فى الخلفية)
+  var planView = document.getElementById('v-plan');
+  if(planView && planView.classList.contains('active')){ try{ renderPlan(); }catch(e){} }
 }
 
 var dashAdmin = '';   // فلتر لوحة القيادة بالإدارة
@@ -3722,7 +3861,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-6';
+  var SW_VER = 'tired-canals-v5-8';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
