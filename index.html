@@ -211,6 +211,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 <div class="view active" id="v-dash">
   <div class="wrap">
     <div class="hero" id="hero-kpi"></div>
+    <select id="dash-admin" onchange="setDashAdmin(this.value)" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px;margin-bottom:10px;font-weight:700;color:var(--navy)"></select>
     <div class="stat-row">
       <div class="stat"><div class="num" id="s-total">0</div><div class="lbl" id="s-total-lbl">إجمالى الترع</div></div>
       <div class="stat danger"><div class="num" id="s-crit">0</div><div class="lbl">حرجة</div></div>
@@ -221,6 +222,16 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
     <div class="card">
       <div class="card-h"><span class="t">توزيع شدة الحالة</span></div>
       <div class="card-b" id="sev-dist"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="t">المؤشرات الفنية (تحليلات هيدروليكية)</span><span class="chip info">تفصيلى</span></div>
+      <div class="card-b" id="tech-indicators"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="t">توزيع الترع المتعبة بالإدارات</span></div>
+      <div class="card-b" id="admin-dist"></div>
     </div>
 
     <div class="card">
@@ -496,7 +507,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.5';
+var APP_VER = 'v5.6';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -2326,13 +2337,31 @@ function refreshAll(){
   renderDash(); renderList(); renderReport();
 }
 
+var dashAdmin = '';   // فلتر لوحة القيادة بالإدارة
+function setDashAdmin(v){ dashAdmin = v; renderDash(); }
+
 function renderDash(){
-  var cc = canalCounts(DB.canals);
-  var crit = DB.canals.filter(function(c){return c._sev==='crit';}).length;
-  var probs = DB.canals.reduce(function(a,c){return a+(c._diag?c._diag.length:0);},0);
-  var tiredLen = DB.canals.reduce(function(a,c){return a+normLenKm(c.f8_tired_len);},0);
-  var totalCost = DB.canals.reduce(function(a,c){return a+((c._cost&&c._cost.total)?c._cost.total:0);},0);
-  var totalZam = affectedZam(DB.canals);
+  // build admin filter dropdown (once per render, preserves selection)
+  var adminSel = document.getElementById('dash-admin');
+  if(adminSel){
+    var admMap = {};
+    DB.canals.forEach(function(c){ var a=(c.f8_admin||'').trim(); if(a) admMap[a]=(admMap[a]||0)+1; });
+    var admList = Object.keys(admMap).sort();
+    var o = '<option value="">📊 كل الإدارات — عرض الجمهورية</option>';
+    admList.forEach(function(a){ o += '<option value="'+esc(a)+'"'+(dashAdmin===a?' selected':'')+'>'+esc(a)+' ('+admMap[a]+')</option>'; });
+    adminSel.innerHTML = o;
+    adminSel.value = dashAdmin;
+  }
+
+  // filtered set per dashboard admin filter
+  var canals = dashAdmin ? DB.canals.filter(function(c){return (c.f8_admin||'')===dashAdmin;}) : DB.canals;
+
+  var cc = canalCounts(canals);
+  var crit = canals.filter(function(c){return c._sev==='crit';}).length;
+  var probs = canals.reduce(function(a,c){return a+(c._diag?c._diag.length:0);},0);
+  var tiredLen = canals.reduce(function(a,c){return a+normLenKm(c.f8_tired_len);},0);
+  var totalCost = canals.reduce(function(a,c){return a+((c._cost&&c._cost.total)?c._cost.total:0);},0);
+  var totalZam = affectedZam(canals);
   document.getElementById('s-total').textContent = cc.units;
   var lblEl = document.getElementById('s-total-lbl');
   if(lblEl) lblEl.textContent = (cc.reaches!==cc.units)? ('ترعة فعلية ('+cc.reaches+' حبس)') : 'إجمالى الترع';
@@ -2341,7 +2370,8 @@ function renderDash(){
   document.getElementById('s-len').textContent = Math.round(tiredLen*10)/10;
 
   // hero KPI band
-  var hero = '<div class="ht">مركز قيادة الترع المتعبة — على مستوى الجمهورية</div>';
+  var scope = dashAdmin ? esc(dashAdmin) : 'على مستوى الجمهورية';
+  var hero = '<div class="ht">مركز قيادة الترع المتعبة — '+scope+'</div>';
   hero += '<div class="hrow">';
   hero += '<div><div class="hbig haccent">'+fmtEGP(totalCost)+'</div><div class="hsub">إجمالى التكلفة التقديرية للتأهيل</div></div>';
   hero += '<div><div class="hbig">'+fmt(round0(totalZam))+'</div><div class="hsub">الزمام المتأثر فعلاً (فدان)</div></div>';
@@ -2350,7 +2380,7 @@ function renderDash(){
 
   // severity distribution
   var dist = {crit:0,bad:0,warn:0,ok:0};
-  DB.canals.forEach(function(c){ dist[c._sev]=(dist[c._sev]||0)+1; });
+  canals.forEach(function(c){ dist[c._sev]=(dist[c._sev]||0)+1; });
   var maxD = Math.max(1, dist.crit, dist.bad, dist.warn, dist.ok);
   var colors = {crit:'var(--crit)',bad:'var(--bad)',warn:'var(--warn)',ok:'var(--ok)'};
   var sd = '';
@@ -2360,9 +2390,15 @@ function renderDash(){
   });
   document.getElementById('sev-dist').innerHTML = cc.reaches? sd : emptyMsg('لا توجد بيانات بعد');
 
+  // ===== technical indicators (from the 7 advanced analyses) =====
+  renderTechIndicators(canals);
+
+  // ===== admin distribution (only meaningful in republic view) =====
+  renderAdminDist();
+
   // problem ranking
   var counts = {};
-  DB.canals.forEach(function(c){ (c._diag||[]).forEach(function(d){ counts[d.key]=(counts[d.key]||0)+1; }); });
+  canals.forEach(function(c){ (c._diag||[]).forEach(function(d){ counts[d.key]=(counts[d.key]||0)+1; }); });
   var arr = Object.keys(counts).map(function(k){return {k:k,n:counts[k]};}).sort(function(a,b){return b.n-a.n;});
   var maxP = arr.length? arr[0].n : 1;
   var pr = arr.slice(0,8).map(function(x){
@@ -2372,8 +2408,8 @@ function renderDash(){
   }).join('');
   document.getElementById('prob-rank').innerHTML = arr.length? pr : emptyMsg('لا مشاكل مرصودة');
 
-  // priority list (top by weighted priority index)
-  var pri = DB.canals.slice()
+  // priority list
+  var pri = canals.slice()
     .sort(function(a,b){return (b._pri?b._pri.total:0)-(a._pri?a._pri.total:0);}).slice(0,8);
   var pl = pri.map(function(c){
     var pv = c._pri? c._pri.total : 0;
@@ -2385,6 +2421,73 @@ function renderDash(){
       '<div class="meta">'+esc(c.f8_admin||'')+' · '+sevChip(c._sev)+' · '+(c._diag.length)+' مشكلة'+costTxt+'</div></div>';
   }).join('');
   document.getElementById('priority-list').innerHTML = pri.length? pl : emptyMsg('لا أولويات');
+}
+
+/* مؤشرات التحليلات الهيدروليكية السبعة — عدّ الترع المصابة بكل نوع */
+function renderTechIndicators(canals){
+  var el = document.getElementById('tech-indicators'); if(!el) return;
+  var ind = {flood:0, silt:0, dutygap:0, headloss:0, cleandelay:0, structdecay:0, outfall:0};
+  canals.forEach(function(c){
+    (c._diag||[]).forEach(function(d){
+      var w = d.why||'';
+      if(w.indexOf('حرية مائية')>=0 || w.indexOf('خطر غمر')>=0) ind.flood++;
+      else if(w.indexOf('إطماء يرفع القاع')>=0 || w.indexOf('فقد')>=0 && w.indexOf('العمق التصميمى')>=0) ind.silt++;
+      else if(w.indexOf('فجوة توزيع')>=0) ind.dutygap++;
+      else if(w.indexOf('فاقد هيدروليكى عبر')>=0) ind.headloss++;
+      else if(w.indexOf('فترة التطهير')>=0) ind.cleandelay++;
+      else if(w.indexOf('تدهور إنشائى شامل')>=0) ind.structdecay++;
+      else if(w.indexOf('المصب يحجز')>=0) ind.outfall++;
+    });
+  });
+  var items = [
+    {k:'flood', lbl:'خطر غمر / حرية مائية غير آمنة', icon:'🌊', col:'var(--bad)'},
+    {k:'silt', lbl:'إطماء يتجاوز 20% من العمق', icon:'⛰', col:'var(--warn)'},
+    {k:'dutygap', lbl:'فجوة توزيع (المقنن الفعلى ناقص)', icon:'💧', col:'var(--warn)'},
+    {k:'headloss', lbl:'فاقد هيدروليكى عبر منشآت', icon:'📉', col:'var(--bad)'},
+    {k:'cleandelay', lbl:'تأخّر تطهير الصاولات/الشبك', icon:'🌿', col:'var(--warn)'},
+    {k:'structdecay', lbl:'تدهور إنشائى شامل', icon:'🏗', col:'var(--crit)'},
+    {k:'outfall', lbl:'مصب يحجز/يعوق التصريف', icon:'🚪', col:'var(--warn)'}
+  ];
+  var any = items.some(function(it){return ind[it.k]>0;});
+  if(!any){ el.innerHTML = '<div class="note" style="margin:0">لم تُرصد مؤشرات فنية بعد — تظهر تلقائياً عند إدخال المناسيب والقطاعات والجداول التفصيلية فى نماذج الترع.</div>'; return; }
+  var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
+  items.forEach(function(it){
+    if(ind[it.k]>0){
+      h += '<div style="border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfc">'+
+        '<div style="font-size:22px;font-weight:800;color:'+it.col+'">'+ind[it.k]+'</div>'+
+        '<div style="font-size:11px;color:#56636f;line-height:1.4">'+it.icon+' '+it.lbl+'</div></div>';
+    }
+  });
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+/* توزيع الترع المتعبة بالإدارات — أعمدة مرتّبة تنازلياً */
+function renderAdminDist(){
+  var el = document.getElementById('admin-dist'); if(!el) return;
+  var byAdmin = {};
+  DB.canals.forEach(function(c){
+    var a = (c.f8_admin||'غير محدّدة').trim();
+    if(!byAdmin[a]) byAdmin[a] = {count:0, crit:0, cost:0};
+    byAdmin[a].count++;
+    if(c._sev==='crit') byAdmin[a].crit++;
+    byAdmin[a].cost += (c._cost&&c._cost.total)?c._cost.total:0;
+  });
+  var arr = Object.keys(byAdmin).map(function(a){return {a:a, d:byAdmin[a]};})
+    .sort(function(x,y){return y.d.count-x.d.count;});
+  if(!arr.length){ el.innerHTML = emptyMsg('لا بيانات'); return; }
+  var maxC = arr[0].d.count;
+  var h = '<div class="note" style="margin-top:0;margin-bottom:8px">عدد الأحباس المتعبة لكل إدارة (الأحمر = الحرجة). اضغط إدارة لتصفية اللوحة.</div>';
+  arr.forEach(function(x){
+    var critPct = x.d.count? (x.d.crit/x.d.count*100) : 0;
+    h += '<div onclick="setDashAdmin(\''+esc(x.a).replace(/\x27/g,"")+'\')" style="cursor:pointer;margin-bottom:9px">';
+    h += '<div class="kv" style="margin-bottom:2px"><span class="k" style="font-size:12px">'+esc(x.a)+'</span><span class="v">'+x.d.count+' · '+fmtEGP(x.d.cost)+'</span></div>';
+    h += '<div class="bar-track" style="position:relative">';
+    h += '<div class="bar-fill" style="width:'+(x.d.count/maxC*100)+'%;background:var(--navy)"></div>';
+    if(critPct>0) h += '<div class="bar-fill" style="position:absolute;top:0;right:0;width:'+(x.d.crit/maxC*100)+'%;background:var(--bad)"></div>';
+    h += '</div></div>';
+  });
+  el.innerHTML = h;
 }
 function fmtEGP(v){
   v = num(v);
@@ -3619,7 +3722,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-5';
+  var SW_VER = 'tired-canals-v5-6';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
