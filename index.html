@@ -510,7 +510,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.9';
+var APP_VER = 'v6.0';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -3093,6 +3093,85 @@ function priorityBand(score){
   return {label:'أولوية مؤجَّلة', tier:2, col:'var(--ok)'};
 }
 
+/* ============================================================
+   محرك القرار الهيدروليكى (Hydraulic Decision Engine)
+   يحوّل تشخيص الترعة إلى سلسلة قرار واضحة لكل مشكلة كبرى:
+   المشكلة → السبب الهيدروليكى → الخطورة → أفضل حل → التكلفة
+   → نسبة التحسن المتوقعة → أولوية التنفيذ.
+   ============================================================ */
+function estimateImprovement(c, solKey){
+  // نسبة التحسن المتوقعة فى السعة التصريفية بناءً على مانينج (تقديرى)
+  // Q ∝ (1/n)·A·R^(2/3)·S^(1/2)
+  var base = scnBaseSection(c);
+  var r0 = manningTrapezoid(base.b, base.y, base.z, base.S, base.n);
+  if(!r0 || !(r0.Q>0)) return null;
+  var nu = {b:base.b,y:base.y,z:base.z,S:base.S,n:base.n};
+  if(solKey==='dredge'||solKey==='silt_m'){ nu.y = base.y + 0.4; }       // تطهير: تعميق 40سم
+  else if(solKey==='lining'){ nu.n = 0.015; }                            // تبطين
+  else if(solKey==='widen'){ nu.b = base.b + 1.0; }                      // توسعة
+  else if(solKey==='retwall'||solKey==='retwall_m'){ nu.z = Math.max(0, base.z-0.5); nu.b = base.b+0.5; }
+  else if(solKey==='cover'||solKey==='cover_m'){ nu.n = 0.014; }         // تغطية خرسانية
+  else return null;
+  var r1 = manningTrapezoid(nu.b, nu.y, nu.z, nu.S, nu.n);
+  if(!r1 || !(r1.Q>0)) return null;
+  var pct = Math.round((r1.Q/r0.Q - 1)*100);
+  return {Q0:r0.Q, Q1:r1.Q, pct:pct};
+}
+
+function buildDecisionEngine(c){
+  var diag = c._diag || diagnose(c);
+  if(!diag.length) return '<div class="note" style="margin:0">لا توجد مشاكل مشخّصة — الترعة فى حالة جيدة وفق البيانات المتاحة.</div>';
+
+  // رتّب المشاكل بالشدة وخذ أهم 3 (تجنّب الازدحام)
+  var ranked = diag.slice().sort(function(a,b){ return (SEV_ORDER[b.sev]||0)-(SEV_ORDER[a.sev]||0); });
+  var top = ranked.slice(0, 3);
+
+  // اربط كل مشكلة بالحل من مكتبة الحلول
+  var solOfKey = {siltation:'dredge', weeds:'dredge', seepage:'lining', encroachment:'cover',
+    bridges:'retwall', structure_struct:'struct_renew', structure_hyd:'widen',
+    operational:'widen', outfall:'gate', design_deficit:'lining', illegal_intake:'gate', drain_feed:'gate'};
+
+  var sevCol = {crit:'#b3261e', bad:'#d9822b', warn:'#c9a55c', ok:'#2e7d32'};
+  var h = [];
+  h.push('<div class="note" style="margin-top:0;margin-bottom:10px">يحوّل المحرك بيانات الترعة إلى سلسلة قرار لأهم المشاكل: المشكلة ← السبب ← الخطورة ← الحل ← التكلفة ← التحسن ← الأولوية.</div>');
+
+  top.forEach(function(d, i){
+    var lib = SOLUTIONS[d.key];
+    var col = sevCol[d.sev]||'#56636f';
+    var solKey = solOfKey[d.key] || 'dredge';
+    var solLbl = (DESIGN_MODULES[solKey] && DESIGN_MODULES[solKey].label) || (lib && lib.tiers && lib.tiers[0] ? lib.tiers[0].name : 'تدخل هندسى');
+    var imp = estimateImprovement(c, solKey);
+
+    h.push('<div style="border:1px solid var(--line);border-right:4px solid '+col+';border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfc">');
+    // العنوان: المشكلة + الخطورة
+    h.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">');
+    h.push('<span style="font-weight:800;font-size:13px;color:var(--navy)">'+(i+1)+'. '+(lib?lib.label:d.key)+'</span>');
+    h.push('<span style="font-weight:700;font-size:11px;color:'+col+';background:#fff;border:1px solid '+col+';border-radius:20px;padding:2px 10px">'+(SEV_LABEL[d.sev]||'')+'</span>');
+    h.push('</div>');
+    // السلسلة
+    var chain = [];
+    chain.push('<b>السبب الهيدروليكى:</b> '+(d.why||(lib?lib.diagnosis:'').slice(0,90)||''));
+    chain.push('<b>أفضل حل:</b> '+solLbl);
+    var cpf = costPerFeddan(c);
+    if(c._cost && c._cost.total>0) chain.push('<b>التكلفة التقديرية:</b> '+fmtEGP(c._cost.total)+(cpf.cpf!=null?(' (~'+fmtEGP(Math.round(cpf.cpf))+'/فدان)'):''));
+    if(imp && imp.pct>0) chain.push('<b>التحسن المتوقع:</b> +'+imp.pct+'% فى السعة التصريفية (من '+round2(imp.Q0)+' إلى '+round2(imp.Q1)+' م³/ث) — تقديرى بمانينج');
+    chain.forEach(function(line){
+      h.push('<div style="font-size:11.5px;color:#3a4753;line-height:1.6;margin-bottom:3px">'+line+'</div>');
+    });
+    h.push('</div>');
+  });
+
+  // خلاصة الأولوية والخطورة
+  var pr = solutionPriority(c);
+  var band = priorityBand(pr.total);
+  h.push('<div style="display:flex;gap:8px;margin-top:4px">');
+  h.push('<div style="flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px"><div style="font-size:11px;color:#56636f">خطورة هيدروليكية (HRI)</div><div style="font-size:22px;font-weight:800;color:'+(c._hri?(c._hri.bandKey==="crit"?"#b3261e":c._hri.bandKey==="bad"?"#d9822b":c._hri.bandKey==="warn"?"#c9a55c":"#2e7d32"):"#56636f")+'">'+(c._hri?c._hri.total:'—')+'</div></div>');
+  h.push('<div style="flex:1;text-align:center;border:1px solid var(--line);border-radius:10px;padding:10px"><div style="font-size:11px;color:#56636f">أولوية التنفيذ</div><div style="font-size:22px;font-weight:800;color:'+band.col+'">'+pr.total+'</div><div style="font-size:10px;color:'+band.col+';font-weight:700">'+band.label+'</div></div>');
+  h.push('</div>');
+
+  return h.join('');
+}
+
 function buildSolutionPriority(c){
   var diag = c._diag || diagnose(c);
   var adminKeys = classifyProposal(c);
@@ -3463,6 +3542,11 @@ function openDetail(id){
   // ===== Flow-efficiency gauge (عدّاد كفاءة التدفّق) =====
   h.push('<div class="card"><div class="card-h"><span class="t">عدّاد كفاءة التدفّق</span><span class="chip info">هيدروليكى</span></div><div class="card-b">');
   h.push(buildGauge(c));
+  h.push('</div></div>');
+
+  // ===== محرك القرار الهيدروليكى (السلسلة الكاملة) =====
+  h.push('<div class="card"><div class="card-h"><span class="t">محرك القرار الهيدروليكى</span><span class="chip info">خلاصة تنفيذية</span></div><div class="card-b">');
+  h.push(buildDecisionEngine(c));
   h.push('</div></div>');
 
   // ===== Recommended solution + execution priority (الحل وأولويته) =====
@@ -3945,7 +4029,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-9';
+  var SW_VER = 'tired-canals-v6-0';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
