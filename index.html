@@ -510,7 +510,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.8';
+var APP_VER = 'v5.9';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -1115,7 +1115,69 @@ function priorityIndex(c){
   };
 }
 
-/* ---- Cost estimator (EGP, editable unit rates) ---- */
+/* ============================================================
+   مؤشر الخطورة الهيدروليكى الموحّد (Hydraulic Risk Index — HRI)
+   مؤشر خطورة هيدروليكى خالص 0-100 (بلا تكلفة/سهولة، عكس priorityIndex).
+   مكوّناته الست تعكس خطورة الحالة الفنية فقط:
+     1) العجز التصريفى       (0-30)
+     2) الإطماء/نقص السعة    (0-15)
+     3) الرشح                (0-10)
+     4) التعديات             (0-15)
+     5) حالة المنشآت والجسور (0-20)
+     6) الزمام المتأثر       (0-10)
+   ============================================================ */
+function hydraulicRiskIndex(c){
+  var diag = c._diag || diagnose(c);
+  var hasKey = function(k){ return diag.some(function(d){return d.key===k;}); };
+  var sevOf = function(keys){
+    var s=0; diag.forEach(function(d){ if(keys.indexOf(d.key)>=0){ var v=SEV_ORDER[d.sev]||0; if(v>s) s=v; } }); return s;
+  };
+
+  // 1) العجز التصريفى (0-30) — من الهيدروليكا أو نسبة الطول المتعب
+  var deficit = 0;
+  if(c._hyd && c._hyd.deficitPct!=null){
+    deficit = Math.max(0, Math.min(30, c._hyd.deficitPct*0.3));
+  } else {
+    var tl = normLenKm(c.f8_tired_len), L = normTotalLenKm(c.f8_len);
+    var ratio = (L>0)? Math.min(1, tl/L) : 0.4;
+    deficit = ratio*30;
+  }
+
+  // 2) الإطماء/نقص السعة (0-15) — من تشخيص الإطماء وشدته
+  var siltSev = sevOf(['siltation']);            // 0..4
+  var silt = (siltSev/4)*15;
+
+  // 3) الرشح (0-10)
+  var seepSev = sevOf(['seepage']);
+  var seep = (seepSev/4)*10;
+
+  // 4) التعديات (0-15)
+  var encSev = sevOf(['encroachment','illegal_intake']);
+  var enc = (encSev/4)*15;
+
+  // 5) حالة المنشآت والجسور (0-20)
+  var structSev = sevOf(['bridges','structure_struct','structure_hyd','outfall']);
+  var struct = (structSev/4)*20;
+
+  // 6) الزمام المتأثر (0-10) لوغاريتمى (50000 فدان ~ كامل)
+  var zam = affectedZamOne(c);
+  var zamScore = (zam>0)? Math.min(10, (Math.log10(zam+1)/Math.log10(50000))*10) : 1;
+
+  var total = deficit + silt + seep + enc + struct + zamScore;
+  total = Math.round(Math.min(100, total));
+
+  // تصنيف الخطورة
+  var band = total>=75?'حرجة': total>=50?'عالية': total>=25?'متوسطة':'منخفضة';
+  var bandKey = total>=75?'crit': total>=50?'bad': total>=25?'warn':'ok';
+
+  return {
+    total: total, band: band, bandKey: bandKey,
+    parts: {
+      deficit: Math.round(deficit), silt: Math.round(silt), seep: Math.round(seep),
+      enc: Math.round(enc), struct: Math.round(struct), zam: Math.round(zamScore)
+    }
+  };
+}
 var COST_DEFAULTS = {
   dredge_m3: 35,        // تطهير/تجريف لكل م³
   lining_m2: 450,       // تبطين خرسانى لكل م² من المحيط المبطن
@@ -1760,11 +1822,12 @@ function executiveReport(){
 
   // top priority canals for intervention
   d += '<h2>أعلى 15 ترعة أولوية للتدخل (مؤشر مرجّح /100)</h2><table>';
-  d += '<tr><th>#</th><th>الترعة</th><th>الإدارة</th><th>الشدة</th><th>الأولوية</th><th>التكلفة</th></tr>';
+  d += '<tr><th>#</th><th>الترعة</th><th>الإدارة</th><th>الشدة</th><th>HRI</th><th>الأولوية</th><th>التكلفة</th></tr>';
   topPri.forEach(function(c, i){
     var sevTxt = SEV_LABEL[c._sev]||'';
     var sevCls = c._sev==='crit'?'crit':(c._sev==='bad'?'warnc':'');
-    d += '<tr><td>'+(i+1)+'</td><td>'+esc(c.f8_name)+'</td><td>'+esc(c.f8_admin||'')+'</td><td class="'+sevCls+'">'+sevTxt+'</td><td><b>'+(c._pri?c._pri.total:0)+'</b></td><td>'+(c._cost&&c._cost.total>0?fmtEGP(c._cost.total):'—')+'</td></tr>';
+    var hriv = c._hri? c._hri.total : (hydraulicRiskIndex(c).total);
+    d += '<tr><td>'+(i+1)+'</td><td>'+esc(c.f8_name)+'</td><td>'+esc(c.f8_admin||'')+'</td><td class="'+sevCls+'">'+sevTxt+'</td><td>'+hriv+'</td><td><b>'+(c._pri?c._pri.total:0)+'</b></td><td>'+(c._cost&&c._cost.total>0?fmtEGP(c._cost.total):'—')+'</td></tr>';
   });
   d += '</table>';
 
@@ -2469,6 +2532,7 @@ function refreshAll(){
     c._hyd = computeHydraulics(c);
     c._cost = estimateCost(c);
     c._pri = priorityIndex(c);
+    c._hri = hydraulicRiskIndex(c);
   });
   renderDash(); renderList(); renderReport();
   // حدّث تبويب الخطة أيضاً إن كان مفتوحاً (مثلاً بعد مزامنة سحابية فى الخلفية)
@@ -3355,8 +3419,28 @@ function openDetail(id){
   if(!c) return;
   c._diag = diagnose(c); c._sev = overallSeverity(c);
   c._hyd = computeHydraulics(c); c._cost = estimateCost(c); c._pri = priorityIndex(c);
+  c._hri = hydraulicRiskIndex(c);
   var h = [];
   h.push('<button class="btn btn-out btn-sm" onclick="nav(\'list\')" style="margin-bottom:12px">‹ رجوع للقائمة</button>');
+
+  // ===== رأس الملف الهندسى التنفيذى: HRI بارز =====
+  var hri = c._hri;
+  var hriCol = hri.bandKey==='crit'?'#b3261e':hri.bandKey==='bad'?'#d9822b':hri.bandKey==='warn'?'#c9a55c':'#2e7d32';
+  h.push('<div class="card" style="border:2px solid '+hriCol+'"><div class="card-b" style="text-align:center;padding:16px">');
+  h.push('<div style="font-size:13px;color:#56636f;font-weight:700;margin-bottom:4px">مؤشر الخطورة الهيدروليكى الموحّد (HRI)</div>');
+  h.push('<div style="font-size:46px;font-weight:800;color:'+hriCol+';line-height:1">'+hri.total+'<span style="font-size:18px;color:#8a96a2">/100</span></div>');
+  h.push('<div style="font-size:15px;font-weight:700;color:'+hriCol+';margin-top:2px">خطورة '+hri.band+'</div>');
+  h.push('<div class="bar-track" style="height:10px;margin-top:10px"><div class="bar-fill" style="width:'+hri.total+'%;background:'+hriCol+'"></div></div>');
+  // مكوّنات الـHRI
+  h.push('<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:12px;font-size:11px">');
+  var hriParts = [['العجز التصريفى',hri.parts.deficit,30],['الإطماء',hri.parts.silt,15],['الرشح',hri.parts.seep,10],['التعديات',hri.parts.enc,15],['المنشآت',hri.parts.struct,20],['الزمام المتأثر',hri.parts.zam,10]];
+  hriParts.forEach(function(p){
+    h.push('<div style="border:1px solid var(--line);border-radius:8px;padding:6px"><div style="font-weight:800;color:var(--navy);font-size:14px">'+p[1]+'<span style="font-size:9px;color:#8a96a2">/'+p[2]+'</span></div><div style="color:#56636f">'+p[0]+'</div></div>');
+  });
+  h.push('</div>');
+  h.push('<div class="note" style="margin:8px 0 0;font-size:10.5px">مؤشر هيدروليكى خالص يقيس خطورة الحالة الفنية (بلا اعتبارات تكلفة/سهولة). يختلف عن «مؤشر الأولوية» الذى يوازن الأثر بالتكلفة لترتيب التنفيذ.</div>');
+  h.push('</div></div>');
+
   h.push('<div class="card"><div class="card-h"><span class="t">'+esc(c.f8_name)+'</span>'+sevChip(c._sev)+'</div><div class="card-b">');
   h.push(kv('الإدارة', c.f8_admin)+kv('الهندسة', c.f8_eng)+kv('الترعة المغذية', c.f8_feeder));
   var lenKm = normTotalLenKm(c.f8_len), tiredKm = normLenKm(c.f8_tired_len);
@@ -3861,7 +3945,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-8';
+  var SW_VER = 'tired-canals-v5-9';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
