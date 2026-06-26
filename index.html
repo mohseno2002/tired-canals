@@ -285,7 +285,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
         <input id="ai-input" type="text" placeholder="اكتب سؤالك..." style="flex:1" onkeydown="if(event.key==='Enter')aiAsk()">
         <button id="ai-send" class="btn btn-pri" style="width:auto;padding:9px 16px" onclick="aiAsk()">إرسال</button>
       </div>
-      <div class="note" style="margin:6px 0 0">يعمل عبر المزامنة السحابية. يُرسل ملخص بيانات إدارتك لتحليلها. لا يُرسل شيئاً إن لم تُضبط السحابة.</div>
+      <div class="note" style="margin:6px 0 0">مساعد محلى ذكى — يعمل أوفلاين تماماً على جهازك، بدون إنترنت أو تكلفة، ولا يُرسل بياناتك لأى جهة خارجية.</div>
     </div></div>
 
     <div class="sec-title">المزامنة السحابية (جوجل شيت)</div>
@@ -523,7 +523,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v6.1';
+var APP_VER = 'v7.0';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -803,6 +803,140 @@ function buildAIContext(){
   });
   return lines.join('\n');
 }
+/* ============================================================
+   المساعد المحلى الذكى — يعمل أوفلاين تماماً، بدون أى خادم/AI خارجى
+   يفهم نية السؤال من كلمات مفتاحية عربية ويحلل البيانات مباشرة.
+   ============================================================ */
+function aiScope(){
+  var list = DB.canals || [];
+  if(cloudCfg.admin) list = list.filter(function(c){ return (c.f8_admin||'')===cloudCfg.admin; });
+  return list;
+}
+function aiNorm(s){
+  // تطبيع النص العربى: إزالة التشكيل وتوحيد الألف والياء والتاء المربوطة
+  return (s||'').replace(/[\u064B-\u0652]/g,'').replace(/[إأآا]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim();
+}
+function aiHas(q, words){ for(var i=0;i<words.length;i++){ if(q.indexOf(aiNorm(words[i]))>=0) return true; } return false; }
+
+/* يبنى رد المساعد محلياً حسب نية السؤال */
+function aiLocalAnswer(rawQ){
+  var q = aiNorm(rawQ);
+  var list = aiScope();
+  if(!list.length) return 'لا توجد ترع مسجّلة حالياً' + (cloudCfg.admin?(' لإدارة: '+cloudCfg.admin):'') + '. أضف ترعاً أو اجلب من السحابة أولاً.';
+  // ضمان حساب المؤشرات
+  list.forEach(function(c){ if(!c._sev) c._sev=overallSeverity(c); if(!c._diag) c._diag=diagnose(c); if(!c._cost) c._cost=estimateCost(c); if(!c._pri) c._pri=priorityIndex(c); });
+  var n = list.length;
+  var scopeLbl = cloudCfg.admin ? ('إدارة '+cloudCfg.admin) : 'الجمهورية';
+
+  // عدّ حسب الشدة
+  function countSev(s){ return list.filter(function(c){return c._sev===s;}).length; }
+  // إجماليات
+  function sumCost(arr){ var t=0; (arr||list).forEach(function(c){ t+=(c._cost&&c._cost.total)||0; }); return t; }
+  function sumZam(arr){ var t=0; (arr||list).forEach(function(c){ t+=num(c.f8_zam); }); return t; }
+  function fmt(x){ return Math.round(x).toLocaleString('ar-EG'); }
+
+  // ── نية: عدد/إحصاء الترع الحرجة/السيئة ──
+  if(aiHas(q,['كام','عدد','كم']) && aiHas(q,['حرج','حرجه','خطر','اسعاف'])){
+    var crit = list.filter(function(c){return c._sev==='crit';});
+    var t = 'عدد الترع الحرجة فى '+scopeLbl+': '+crit.length+' ترعة (من إجمالى '+n+').';
+    if(crit.length){
+      crit.sort(function(a,b){return (b._pri.total)-(a._pri.total);});
+      t += '\nأبرزها: ' + crit.slice(0,5).map(function(c){return c.f8_name;}).join('، ') + (crit.length>5?'...':'');
+    }
+    return t;
+  }
+  // ── نية: توزيع الشدة العام ──
+  if(aiHas(q,['توزيع الشده','توزيع شده','احصائ','احصاء','ملخص','نظره عامه','وضع عام','اجمالى الحاله','حالة الترع']) && !aiHas(q,['اداره','ادارات','محافظ'])){
+    return 'ملخص حالة الترع فى '+scopeLbl+' ('+n+' ترعة):\n'
+      + '• حرجة: '+countSev('crit')+'\n'
+      + '• سيئة: '+countSev('bad')+'\n'
+      + '• متوسطة: '+countSev('warn')+'\n'
+      + '• جيدة: '+countSev('ok')+'\n'
+      + 'إجمالى التكلفة التقديرية: '+fmt(sumCost())+' ألف جنيه — إجمالى الزمام: '+fmt(sumZam())+' فدان.';
+  }
+  // ── نية: أعلى أولوية / أهم الترع / رتّب ──
+  if(aiHas(q,['اولويه','أولويه','اهم','رتب','رتّب','ترتيب','اعلى','الأعلى','عاجل','تدخل'])){
+    var top = list.slice().sort(function(a,b){return b._pri.total-a._pri.total;});
+    var k = 5; var mq = q.match(/(\d+)/); if(mq){ k=Math.max(1,Math.min(20,parseInt(mq[1]))); }
+    var t = 'أعلى '+k+' ترع أولوية للتدخل فى '+scopeLbl+':\n';
+    top.slice(0,k).forEach(function(c,i){
+      t += (i+1)+'. '+c.f8_name+' ('+(c.f8_admin||'')+') — '+SEV_LABEL[c._sev]+' — مؤشر '+Math.round(c._pri.total)+' — تكلفة '+fmt((c._cost&&c._cost.total)||0)+' ألف ج\n';
+    });
+    return t;
+  }
+  // ── نية: التكلفة ──
+  if(aiHas(q,['تكلفه','تكلفة','تكاليف','ميزانيه','ميزانية','فلوس','جنيه'])){
+    var byCost = list.slice().sort(function(a,b){return ((b._cost&&b._cost.total)||0)-((a._cost&&a._cost.total)||0);});
+    var t = 'إجمالى التكلفة التقديرية للتأهيل فى '+scopeLbl+': '+fmt(sumCost())+' ألف جنيه ('+(sumCost()/1000).toFixed(1)+' مليون ج).\n';
+    t += 'أعلى 3 ترع تكلفة:\n';
+    byCost.slice(0,3).forEach(function(c,i){ t+=(i+1)+'. '+c.f8_name+' — '+fmt((c._cost&&c._cost.total)||0)+' ألف ج\n'; });
+    return t;
+  }
+  // ── نية: شرح مفهوم هندسى (قبل فحص المشاكل لتجنب التقاط الكلمة) ──
+  if(aiHas(q,['يعنى ايه','يعني ايه','ما هو','اشرح','تعريف','معنى','ما معنى'])){
+    var defs=[
+      {k:['استبحار'],t:'الاستبحار: اتساع عرض الترعة وضحالة عمقها نتيجة الإطماء والحشائش، فيقل تصرفها رغم زيادة عرضها. يُكشف بمقارنة القطاع الفعلى بالتصميمى.'},
+      {k:['عجز تصميم','عجز'],t:'العجز التصميمى: قصور القطاع أو المقنن عن تمرير التصرف المطلوب للزمام، يظهر بمقارنة المقنن الفعلى بالأورنيك.'},
+      {k:['مانينج','manning'],t:'معادلة مانينج: لحساب سرعة وتصرف القنوات المكشوفة V=(1/n)R^(2/3)S^(1/2)، حيث n معامل الخشونة وR نصف القطر المائى وS الانحدار.'},
+      {k:['مقنن'],t:'المقنن: حصة الفدان من المياه (م³/فدان/يوم)، أساس حساب التصرف المطلوب للترعة.'},
+      {k:['heading','هيدنج','ارتفاع امام'],t:'ارتفاع المياه أمام المنشأ (heading-up): زيادة منسوب المياه قبل منشأ ضيق نتيجة الفاقد، قد يسبب غمر الجسور.'},
+      {k:['رشح'],t:'الرشح: تسرب المياه من جسم الترعة للأراضى المجاورة، يسبب فقد مياه وتشبّع التربة، ويُعالج بالتبطين أو معالجة الجسور.'},
+      {k:['تطهير'],t:'التطهير: إزالة الإطماء والحشائش من قاع وجوانب الترعة لاستعادة قطاعها التصميمى وتصرفها، يدوى أو ميكانيكى.'}
+    ];
+    for(var di=0;di<defs.length;di++){ if(aiHas(q,defs[di].k)) return defs[di].t; }
+    return 'حدّد المفهوم الذى تريد شرحه (مثل: الاستبحار، العجز التصميمى، مانينج، المقنن، الرشح، التطهير).';
+  }
+  // ── نية: قائمة الإدارات / توزيع على الإدارات (قبل المشاكل والتوزيع العام) ──
+  if(aiHas(q,['اداره','ادارات','محافظه','محافظات','مديريه','توزيع الادار'])){
+    var byAdmin={}; list.forEach(function(c){ var a=c.f8_admin||'غير محدد'; if(!byAdmin[a])byAdmin[a]={n:0,crit:0,cost:0}; byAdmin[a].n++; if(c._sev==='crit')byAdmin[a].crit++; byAdmin[a].cost+=(c._cost&&c._cost.total)||0; });
+    var keys=Object.keys(byAdmin).sort(function(a,b){return byAdmin[b].n-byAdmin[a].n;});
+    var t='توزيع الترع على الإدارات ('+keys.length+' إدارة):\n';
+    keys.slice(0,12).forEach(function(a){ t+='• '+a+': '+byAdmin[a].n+' ترعة ('+byAdmin[a].crit+' حرجة) — '+fmt(byAdmin[a].cost)+' ألف ج\n'; });
+    return t;
+  }
+  // ── نية: مشكلة محددة (استبحار/تطهير/تعديات/رشح/منشآت...) ──
+  var probMap = [
+    {keys:['استبحار','حشائش','تطهير','نظافه','نظافة'], match:['siltation','weeds'], name:'الاستبحار/الحشائش'},
+    {keys:['تعدي','تعديات','ردم','مبانى','مباني'], match:['encroachment'], name:'التعديات'},
+    {keys:['رشح','تسرب'], match:['seepage'], name:'الرشح'},
+    {keys:['منشا','منشآت','كبارى','كبارية','سحاره','سحارة','تغطيه','تغطية'], match:['structure_struct','structure_hyd','bridges'], name:'المنشآت'},
+    {keys:['ماخذ','مأخذ','مخالف'], match:['illegal_intake'], name:'المآخذ المخالفة'},
+    {keys:['عجز','تصميم','مقنن'], match:['design_deficit'], name:'العجز التصميمى'},
+    {keys:['مصب','outfall'], match:['outfall'], name:'المصب'}
+  ];
+  for(var pi=0; pi<probMap.length; pi++){
+    if(aiHas(q, probMap[pi].keys)){
+      var pm = probMap[pi];
+      var hit = list.filter(function(c){ return (c._diag||[]).some(function(d){ return pm.match.indexOf(d.key)>=0; }); });
+      var t = 'الترع التى بها '+pm.name+' فى '+scopeLbl+': '+hit.length+' ترعة.';
+      if(hit.length){
+        hit.sort(function(a,b){return b._pri.total-a._pri.total;});
+        t += '\nأبرزها:\n';
+        hit.slice(0,7).forEach(function(c,i){ t+=(i+1)+'. '+c.f8_name+' ('+(c.f8_admin||'')+') — '+SEV_LABEL[c._sev]+'\n'; });
+        if(hit.length>7) t+='... و'+(hit.length-7)+' أخرى.';
+      }
+      return t;
+    }
+  }
+  // ── نية: البحث عن ترعة بالاسم ──
+  if(aiHas(q,['ترعه','ترعة']) && q.length>6){
+    var found = list.filter(function(c){ return aiNorm(c.f8_name).indexOf(q.replace(aiNorm('ترعه'),'').replace(aiNorm('ترعة'),'').trim())>=0; });
+    if(found.length===1){
+      var c=found[0];
+      var diag=(c._diag||[]).map(function(d){return d.lib?d.lib.label:d.label;}).join('، ');
+      return 'ترعة '+c.f8_name+':\n• الإدارة: '+(c.f8_admin||'-')+'\n• الزمام: '+fmt(num(c.f8_zam))+' فدان\n• الطول: '+(c.f8_len||'-')+' كم\n• الحالة: '+SEV_LABEL[c._sev]+'\n• التكلفة التقديرية: '+fmt((c._cost&&c._cost.total)||0)+' ألف ج\n• المشاكل: '+(diag||'لا يوجد')+'\n• مؤشر الأولوية: '+Math.round(c._pri.total);
+    } else if(found.length>1){
+      return 'وجدت '+found.length+' ترع بالاسم ده: '+found.slice(0,8).map(function(c){return c.f8_name+' ('+(c.f8_admin||'')+')';}).join('، ')+'. حدّد أكثر.';
+    }
+  }
+  // ── نية: قائمة الإدارات / محافظة معينة ──
+  // (تم نقلها للأعلى قبل فحص المشاكل)
+  // ── افتراضى: ملخص + إرشاد ──
+  return 'لم أفهم السؤال تماماً. جرّب صياغة أوضح. أقدر أساعدك فى:\n'
+    + '• «كام ترعة حرجة؟»\n• «رتّب أعلى 5 ترع أولوية»\n• «إجمالى التكلفة»\n• «الترع التى بها استبحار / تعديات / رشح»\n• «توزيع الإدارات»\n• «يعنى إيه استبحار؟»\n\n'
+    + 'ملخص سريع لـ'+scopeLbl+': '+n+' ترعة، منها '+countSev('crit')+' حرجة و'+countSev('bad')+' سيئة، بتكلفة '+fmt(sumCost())+' ألف ج.';
+}
+
 function aiAsk(){
   var inp = document.getElementById('ai-input');
   var box = document.getElementById('ai-chat');
@@ -810,31 +944,15 @@ function aiAsk(){
   if(!inp||!box) return;
   var q = inp.value.trim();
   if(!q) return;
-  if(!cloudConfigured()){ toast('اضبط رابط السحابة أولاً (المساعد يعمل عبره)'); return; }
   box.innerHTML += '<div class="ai-msg ai-user">'+esc(q)+'</div>';
   inp.value = '';
-  btn.disabled = true; btn.textContent = 'جارٍ التفكير...';
-  var loadId = 'ai-load-'+Date.now();
-  box.innerHTML += '<div class="ai-msg ai-bot" id="'+loadId+'">… جارٍ تحليل البيانات والرد</div>';
   box.scrollTop = box.scrollHeight;
-  var ctx = buildAIContext();
-  fetch(cloudCfg.url, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ key:cloudCfg.key, action:'ai', question:q, context:ctx })
-  }).then(function(r){ return r.json(); }).then(function(res){
-    var el = document.getElementById(loadId);
-    if(res && res.ok && res.answer){
-      el.innerHTML = esc(res.answer).replace(/\n/g,'<br>');
-    } else {
-      el.innerHTML = '⚠ ' + esc((res&&res.error)||'تعذّر الرد. تأكد من ضبط مفتاح Gemini فى الخادم.');
-    }
-    btn.disabled=false; btn.textContent='إرسال';
-    box.scrollTop = box.scrollHeight;
-  }).catch(function(err){
-    var el=document.getElementById(loadId); if(el) el.innerHTML='⚠ خطأ شبكة: '+esc(err.message);
-    btn.disabled=false; btn.textContent='إرسال';
-  });
+  // المساعد محلى — رد فورى بدون شبكة
+  var ans;
+  try{ ans = aiLocalAnswer(q); }
+  catch(e){ ans = 'حدث خطأ فى التحليل: '+e.message; }
+  box.innerHTML += '<div class="ai-msg ai-bot">'+esc(ans).replace(/\n/g,'<br>')+'</div>';
+  box.scrollTop = box.scrollHeight;
 }
 
 function fillCloudForm(){
@@ -4108,7 +4226,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v6-1';
+  var SW_VER = 'tired-canals-v7-0';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
