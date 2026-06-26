@@ -298,6 +298,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div style="height:8px"></div>
       <button class="btn btn-sand" onclick="reloadOfficial()">↻ تحديث/إعادة تحميل البيانات الرسمية</button>
       <div style="height:8px"></div>
+      <button class="btn btn-soft" onclick="addDemoCanal()">⭐ إضافة ترعة نموذجية (لعرض كل التحليلات)</button>
+      <div class="note">ترعة مثال مملوءة بالكامل (مناسيب، قطاع، جداول) تُظهر التشخيص الدقيق وكل التحليلات الهيدروليكية السبعة. يمكن حذفها كأى ترعة.</div>
+      <div style="height:8px"></div>
       <button class="btn btn-out" onclick="document.getElementById('imp').click()">⬆ استيراد قاعدة بيانات</button>
       <input type="file" id="imp" accept=".json" style="display:none" onchange="importJSON(event)">
       <div style="height:8px"></div>
@@ -319,7 +322,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <p style="font-size:13px;color:#48535e">سجل رقمى لحصر وتشخيص الترع المتعبة على مستوى الجمهورية، مبنى على الاستبيان الرسمى ذى الثمانية نماذج، مع محرك مانينج، مؤشر أولوية مرجّح، تقدير تكلفة، ومذكرات فنية.</p>
       <div id="forms-info"></div>
       <hr class="sep">
-      <p class="note">الإدارة المركزية للموارد المائية والرى لمحافظتى القاهرة والجيزة — وزارة الموارد المائية والرى. أداة عمل داخلية صفرية التكلفة.</p>
+      <p class="note">وزارة الموارد المائية والرى — أداة عمل هندسية داخلية صفرية التكلفة لحصر وتشخيص الترع المتعبة على مستوى الجمهورية.</p>
     </div></div>
   </div>
 </div>
@@ -358,7 +361,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div class="sec-title">النماذج الثمانية المدمجة</div>
       <div id="forms-info"></div>
       <hr class="sep">
-      <p class="note">الإدارة المركزية للموارد المائية والرى لمحافظتى القاهرة والجيزة — وزارة الموارد المائية والرى. أداة عمل داخلية صفرية التكلفة.</p>
+      <p class="note">وزارة الموارد المائية والرى — أداة عمل هندسية داخلية صفرية التكلفة لحصر وتشخيص الترع المتعبة على مستوى الجمهورية.</p>
     </div></div>
   </div>
 </div>
@@ -493,7 +496,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v5.3';
+var APP_VER = 'v5.5';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -569,6 +572,68 @@ function reloadOfficial(){
 function saveDB(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
   catch(e){ toast('تعذر الحفظ: المساحة ممتلئة'); }
+}
+
+/* ============================================================
+   ترعة نموذجية محلولة بالكامل — لعرض كل التحليلات الهيدروليكية.
+   تُضاف بمعرّف ثابت (demo) فلا تتكرر، ويمكن حذفها كأى ترعة.
+   ============================================================ */
+function addDemoCanal(){
+  var demo = {
+    id: 'demo-showcase',
+    f8_name: '⭐ ترعة نموذجية (مثال توضيحى للتحليلات)',
+    f8_admin: 'أمثلة توضيحية',
+    f8_eng: 'هندسة العرض',
+    f8_expansion: 'إدارة التوسع التجريبية',
+    f8_feeder: 'الترعة الرئيسية',
+    f8_zam: '5000', f8_len: '10', f8_tired_len: '4',
+    f8_from: '2', f8_to: '6',
+    f1_reaches: JSON.stringify([{from:'2',to:'6'},{from:'8',to:'9'}]),
+    f8_desc: 'مثال يوضّح كل التحليلات: قطاع فعلى، مناسيب، إطماء، فاقد منشآت، فجوة توزيع.',
+    f8_proposal: 'تأهيل وتبطين الترعة',
+    // القطاع الفعلى (لمانينج والعجز)
+    f1_bedw: '6', hyd_y: '1.4', hyd_z: '1.5', hyd_n: '0.045', f1_slope: '8', hyd_slope_unit: 'cmkm',
+    // القطاع التصميمى
+    des_bedw: '8', des_y: '2.5', des_z: '1.5',
+    // المناسيب (لتحليل الغمر)
+    f2_bridge_r: '12.8', f2_bridge_l: '13.0', f2_water_max: '12.5', f2_water_min: '11.2',
+    f2_land_r: '12.4', f2_land_l: '12.6',
+    // منسوب القاع (لتحليل الإطماء): فعلى أعلى من تصميمى = إطماء
+    f2_bedlvl: '8.0', f2_bedlvl_field: '8.6', f2_survey_date: '2024-03',
+    // المقنن (لفجوة التوزيع)
+    f2_duty_actual: '18', f2_duty_ornik: '28',
+    f1_zam_actual: '5000', f1_zam_ornik: '6500', f1_q_req: '2.4', f1_flow: 'cont',
+    // الجداول الديناميكية
+    f3_sawalat: JSON.stringify([{km:'2',type:'iron',state:'maint',period:'120'},{km:'4',type:'barrels',state:'good',period:'60'}]),
+    f3_nets: JSON.stringify([{km:'6',state:'renew',period:'200'}]),
+    f4_covers: JSON.stringify([{km:'3',len:'40',type:'box',openings:'2',state:'maint',wl_front:'11.5',wl_back:'11.0'},{km:'5',len:'30',type:'pipe',state:'renew',wl_front:'11.0',wl_back:'10.2'}]),
+    f4_pipebridges: JSON.stringify([{km:'3.5',npipes:'2',dia:'1.0',state:'renew',hyd:'submerged'}]),
+    f4_protects: JSON.stringify([{km:'4',type:'تكاسى دبش',state:'maint'}]),
+    f5_openbridges: JSON.stringify([{km:'5.5',openings:'3',state:'renew',hyd:'free'}]),
+    f5_culverts: JSON.stringify([{km:'7',len:'25',type:'pipe',npipes:'2',dia:'1.2',state:'maint',wl_front:'10.5',wl_back:'10.0'}]),
+    f5_pumps: JSON.stringify([{km:'8',units:'2',discharge:'1.5',eff:'55'}]),
+    // الجسور والشكاوى والرشح
+    f6_bridges: JSON.stringify([{km:'3',collapse:'mid',silt:'light',choke:''},{km:'5',collapse:'heavy',silt:'mid',choke:'light'}]),
+    f6_complaints: JSON.stringify([{count:'4',kind:'نقص وصول المياه'}]),
+    f6_seeps: JSON.stringify([{km:'4',land_r:'12.4',land_l:'12.6'}]),
+    f5_bridge: 'heavy', f5_complaints: '4', f5_seepage: 'yes',
+    // التعديات
+    f7_enc_fill: 'yes', f7_enc_build: 'yes', f7_enc_farm: 'no', f7_enc_pipes: 'no',
+    f6_encroach: 'heavy', f6_illegal: 'yes', f7_illegal_q: '0.3', f6_oper: 'yes',
+    // الحالة الهيدروليكية + المصب
+    f7_mouth_state: 'maint', f7_outfall: 'hold', f7_danger: 'no',
+    f8_outfall_exist: 'yes', f8_outfall_to: 'drain', f8_outfall_state: 'maint', f8_outfall_hold: 'hold',
+    f4_struct: 'renew', f4_hyd: 'submerged', f4_pump_eff: '55',
+    f3_struct: 'renew', f3_hyd: 'submerged',
+    f8_review_opinion: 'يُنصح بالبدء بتعلية الجسور ومعالجة الاختناقات قبل التبطين.',
+    f7_studies: 'دراسة قطاع فعلى 2024.',
+    updated: Date.now(), created: Date.now()
+  };
+  var existing = DB.canals.findIndex(function(c){return c.id==='demo-showcase';});
+  if(existing>=0){ DB.canals[existing] = demo; toast('تم تحديث الترعة النموذجية'); }
+  else { DB.canals.push(demo); toast('تمت إضافة الترعة النموذجية'); }
+  saveDB(); refreshAll();
+  openDetail('demo-showcase');
 }
 
 /* ============================================================
@@ -3407,7 +3472,7 @@ function renderSettings(){
     var step = (k==='perm_k')?'0.000001':'0.01';
     h += '<label class="fl">'+soilLabels[k]+'</label><input type="number" step="'+step+'" value="'+soil[k]+'" onchange="saveSoil(\''+k+'\',this.value)">';
   });
-  h += '<div class="note">القيم الافتراضية لتربة الجيزة الطميية-الرملية (k≈1e-5 م/ث، m≈1.0). عدّلها حسب تقرير التربة الفعلى. تغيير أى إعداد يعيد حساب كل التحليلات فوراً.</div>';
+  h += '<div class="note">القيم الافتراضية لتربة وادى النيل الطميية-الرملية (k≈1e-5 م/ث، m≈1.0). عدّلها حسب تقرير التربة الفعلى لكل منطقة. تغيير أى إعداد يعيد حساب كل التحليلات فوراً.</div>';
   el.innerHTML = h;
 }
 function setSeason(sea){ if(!DB.settings)DB.settings={}; DB.settings.season=sea; saveDB(); refreshAll(); toast('الموسم: '+seasonLabel(sea)); }
@@ -3554,7 +3619,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v5-3';
+  var SW_VER = 'tired-canals-v5-5';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
