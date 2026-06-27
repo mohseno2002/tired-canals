@@ -12,34 +12,69 @@
 <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjogItiz2KzZhCDYp9mE2KrYsdi5INin2YTZhdiq2LnYqNipIiwgInNob3J0X25hbWUiOiAi2KfZhNiq2LHYuSDYp9mE2YXYqti52KjYqSIsICJzdGFydF91cmwiOiAiLiIsICJzY29wZSI6ICIuIiwgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMwZTNiNWMiLCAidGhlbWVfY29sb3IiOiAiIzBlM2I1YyIsICJkaXIiOiAicnRsIiwgImxhbmciOiAiYXIiLCAiaWNvbnMiOiBbeyJzcmMiOiAiZGF0YTppbWFnZS9wbmc7YmFzZTY0LGlWQk9SdzBLR2dvQUFBQU5TVWhFVWdBQUFNQUFBQURBQ0FJQUFBRGR2dnRRQUFBQ3NVbEVRVlI0MnUzZFFVb3JRUmlGMFZwQjl1RFVMYmdWOStNeUhEbDNFVTVja0FpT01vZzBJVWxMTE5LZHJ2OGUrQWFDS0kvbWNMdUMvWksyZTNxV3Vtc3VnUUFTUUFKSUFFa0FDU0FCSklBa2dBU1FBQkpBRWtBQ1NBQUpJQWtnQVNTQUJKQUFrZ0FTUUFKSUFFa0FDU0FCSklBa2dQN3U4KzIzdWEvUHY2VjBRTWNhdnI1Ly9odE1vWUNtTGVsQU15ZHArclVBMVorY3ZyMjVmcE1BcWp3OEM5RTVIeVNBckk0MWlnZDBGenBSYTlUb1lRaWd5N2V0dTlOSnVKMDF3Mk9LQUJwQVQxVkRqUjZHQUJwR1R6MURqUjZHQU5yV2F5NkE2R0VvQnRCd042OWloaG85REVVdjBOQjZBSEw2dVVFQTBaTTdRczNwaDZGUVFHWDBBR1IrY2cwMUw3NmNwaE1YcUo0ZUMwUlBvaUdBQUFJSUlJQ2NvQWM5Unpmelk0UUFBZ2dnZ0FCeUFBbzhCbGtnQ3dRUVFBQUJCSkF6a0RPUUJUSkNBTkVERUVBQUFRU1FRN1JEdEFXeVFBQUJCQkJBQURrRE9RTjVwTlg4QUFRUVFBQUJ4TkFDZWp4VTd5anR2elpiSVBjdmIrOUNEMEFBQWNTUXQ3aHpsSFo4cmd5b3dBaDVtMStBQUdLSW5saEFPeCsyQWxDZ29VSC9jQUdRK1FGb2ZFTSs4cEloZWlvQzJyNGhIL3ZORUQzVkFSME1iWXJSNGQ5VDhsTFhCTFNwS1NyemlqME8wQllNVlIyZUZFQ1RvZlVsRmI1dFpRRmFmNDFxMzdOeUFhMXd1QTVablZ4QUM5M1VwbDhZZURFVEFaME1VcmVrNHgrUHZZYlJnT1l3bmNDYSs1YUxCdEJWc0Z3RWdBU1FBQkpBRWtBQ1NBQUpJQUhrRWdnZ0FhUkJBVDIrZmtqZEFTU0FCSkFBRWtBU1FBSklBQWtnQ1NBQkpJQUVrQVNRQUJKQUFrZ0NTRGNBNUtsZWVhaGVBQWtnQVNRQkpJQTBES0NIbDNlcE80QUVrQUFTUUFKSUFrZ0FDU0FCSkFFa2dBU1FBSkl1QWZKQWdqd1BKSUFFa0FDU0FCSkFBa2dBU1FBSklBRWtnQ1NBQkpBQUVrQVNRQUpJQUFrZ0FTUUJKSUFFa0FDU0FCSkFBa2dBU1FBSklBR2tXdTBCYkhQcmZNNXNWemtBQUFBQVNVVk9SSzVDWUlJPSIsICJzaXplcyI6ICIxOTJ4MTkyIiwgInR5cGUiOiAiaW1hZ2UvcG5nIiwgInB1cnBvc2UiOiAiYW55IG1hc2thYmxlIn0sIHsic3JjIjogImRhdGE6aW1hZ2UvcG5nO2Jhc2U2NCxpVkJPUncwS0dnb0FBQUFOU1VoRVVnQUFBZ0FBQUFJQUNBSUFBQUI3R2tPdEFBQUl5a2xFUVZSNDJ1M2NRYXJxU2hDQTRhd2dlM0RxRnJLVjdNZGxPSEx1SXB5NElCRWM2VkNDSVFra3BxdnJnMi93ZUhEaFBRLzAzMVh0dVUzYjlRQWsxUGdJQUFRQUFBRUFRQUFBRUFBQUJBQUFBUUJBQUFBUUFBQUVBQUFCQUVBQUFCQUFBQVFBQUFFQVFBQUFFQUFBQkFBQUFRQkFBQUFRQUFBRUFBQUJBRUFBQUFRQUFBRUFRQUFBRUFBQUJBQUFBUUJBQUFBUUFBQUVBQUFCQUVBQUFCQUFBQVFBQUFFQVFBQUFFQUFBQkFBQUFRQkFBQUFRQUFBRUFBQUJBRUFBQUFUQXB3QWdBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0NBQUFBZ0FBQUlBQUFDQUlBQUFDQUFBQWdBQUFJQWdBQUFJQUFBQ0FBQUFnQWdBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0RidVY5Ky9QUFl2M3c4WDB2L0ZBZ0FsSHZ1ZjQ3MUxTZ0JBZ0JsSGZvYkhmZHppQUVDQVA5ZTdPeDQ2RStXUUJVUUFJaXgyTEVzUWdDZ1VJSE8vYkVTZ0FEQWdvdC82SFBmVXdFQ0FKRmVkTVVBQVlCOXR2elZILzJEMVpBU0lBQ1E2K2ozUW9BQTRPS2Y5OXkzRkVJQXNPaEhDUkFBYkh1d0YwSUE4TXlMSjJJRUFCZC9vd0FJQU5iOUhnWkFBSER4TndxQUFPRGlieFFBQWNERjN5Z0FBb0RmN1RJSGdBRGc0bThVQUFIQTB0OG9BQUtBaTc5UkFBUUFGMytqQUFJQTd2N21BQVFBblA0YWdBQ0E3M3JhQlNFQTRPSnZGRUFBY1BmSEhJQUE0TzZQT1FBQndPbVBCaUFBMlB4Z0Y0UUE0TzZQT1FBQndOMGZjd0FDZ0xzLzVnQUVBQUZBQUJBQWl0bjhPUDN0Z2hBQTNQMHhCeUFBT1AzUkFBUUFYL3ZCSWdnQndQVWZRd0FDZ05NZkRVQUFzUHpCSWdnQndOMGZjd0FDZ0cvOVl3NUFBSEQ5eHhDQUFPRDBSd01RQUN4L3NBaENBSEQ5eHhDQUFPRDBSd01RQUFRQWl5QUVBTC8yaFNFQUFjRDFId0ZBQUhENm93RUlBSlkvZUFsQUFIRDl4eENBQURqOW5YRm9BQUpnL3dPMlFBTGdVM0Q5QjBPQUFDQUFJQUFDUUdYTEh3SEFJZ2dCY1AwSFF3QUNJQUFnQUFLQUwvK0FMWkFBNFBvUGhnQUJ3T21QQmlBQUNBQUNnQURnQVFEUEFBZ0FydjhZQWhBQUJBQUJRQUR3Mjc5WUJDRUF1UDVqQ0VBQUVBQUVBQUhBL2dkYklBUUExMzhNQVFnQUFvQUFJQUFJQUFLQUFPQVhnUEVHZ0FEZytvOGhBQUZBQUJBQUJBRDdIMnlCRUFCTUFKZ0FFQUNuUDJnQUFpQUFJQUFJZ0FjQThBeUFBSmdBd0FRZ0FENEZBUUFCRUFBcTJQOElBTFpBQ0lEclB4Z0NFQUFCQUFGQUFBUUFCQUFCOEIxUThBWWdBSmdBd0FRZ0FBZ0FDSUFBWUFVRVZrQUNnQWtBVEFBQ2dBQWdBQWdBQW9BQUlBQjRBOEFiQUFLQUNRQVRBQUtBQUNBQUNBQUNnQUFnQUhnRHdETUFBb0FKQUJNQUFvQUFJQUFJQUZaQTJQOGdBSmdBTUFFZ0FBZ0FBb0FBSUFBSUFBS0FOd0M4QVNBQW1BQXdBU0FBQWdBQ2dBQllBWUVWRUFKZ0FnQVRBQUlnQUNBQUNJQUFnQUFJQU40QXdCdUFBR0FJQU5kL0FVQUFRQUFFQUZzZzdIOFFBRXdBbUFBUUFBUUFBVUFBRUFBRUFBSEFNd0FlQUJBQURBRzQvaU1BQ0FBQ2dBQmdDMFNnL1k4QUNBQ0dBRnovRVFBRUFBRkFBQkFBQkFBQndCc0F2Z09LQUdBSXdQVWZBVUFBRUFBRUFGc2c3SDhRQUF3QnVQNGpBQWdBQW9BQVlCR0VYd0JHQURBRTRQcVBBQ0FBQ0FBQ2dBQWdBQWdBbmdIdzdVOEVBRU1BcnY4SUFCcUEweDhCd0JZSSt4OEVBRU1BcnY4SWdBQ0FBQ0FBRmtIZ3QzOEZBRU1BdVA0TEFBS0FBQ0FBMkFMaHl6OElBSVlBWFA4UkFEUUFwejhDZ0FiZzlFY0E4QktBN1Q4Q2dDRUExMzhFQUFGQUFCQUFMSUt3L0VFQU1BZmc3bzhBSUFBSUFBS0FSUkNXUHdnQTVnRGMvUkVBekFINE81OFJBQXdCdVA0akFHZ0FUbjhFQUlzZ1BQd2lBQmdDY1AxSEFOQUFuUDRJQUJaQldQNGdBSmdEM1AxQkFOQUFwejhDNEZQQUxzanZmQ0VBWUFody9VY0F3QnpnN284QVlBNXducnI3SXdCb0FFNS9CQUM3SUd4K0VBRE1BYmo3SXdDWUEzRDNSd0F3QitEdWp3QWdBemo2RVFEc2d2QzN2Q0VBbUFOdzkwY0FNQXJneVJjQndDaUFpejhDZ0ZFQUYzOEVBSE1BN3Y0SUFPWUEzL1lCQWNBbzRPSVBBb0JSd01VZkJBQ2pnSXMvQ0FDbUFSZC9FQUJNQTI3OUlBQVlCWHpISHdTQTNVWUJKUmljKzQ1K0JBQWJJVHNmRUFBc2hUenpnZ0NnQkJiOUlBQ2syQXRWRm9Qdi94MC9ZZ1FBY3IwUStJRWlBSkJvTDJUTGp3REF5aVVvc0FxRC96dy9Md1FBS244cXNOeEhBQ0JSREJ6NkNBQkVXaFpOYnBEbS9DbWZMUUlBVmRYQ2g0QUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0NBQUFBZ0FBQUlBQUFDQUlBQUFDQUFBQWdBQUFJQWdBQUFJQUFBQ0FBQUFnQ0FBQUFnQUFBSUFJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUE4UUp3UE44QVNFZ0FBQVFBQUFFQVFBQUFFQUFBQkFBQUFRQkFBQUFRQUFBRUFBQUJBRUFBQUJBQUFBUUFBQUVBUUFBQUVBQUFCQUFBQVFCQUFBQVFBQUFFQUFBQkFFQUFBQVFBQUFFQVFBQUFFQUFBQkFBQUFRQkFBQUFRQUFBRUFBQUJBRUFBQUJBQUFBUUFBQUVBUUFBQUVBQUFCQUFBQVFCQUFBQVFBQUFFQUFBQkFFQUFBQVRBUndBZ0FBQUlBQURWQjZEdGVnQVNFZ0FBQVFCQUFBQVFBQUFFQUFBQkFFQUFBQkFBQUFRQUFBRUFRQUFBRUFBQUJBQUFBUUJBQUFBUUFBQUVBQUFCQUVBQUFCQUFBR1lHNEhDNkFwQ1FBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0NBQUFBZ0FBQUlBQUFDQUlBQUFDQUFBQWdBQUFJQWdBQUFJQUFBQ0FBQUFnQ0FBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0JBWVFGb3V4NkFoQVFBUUFBQUVBQUFCQUFBQVFCQUFBQVFBQUFFQUFBQkFFQUFBQkFBQUFRQUFBRUFRQUFBRUFBQUJBQUFBUUJBQUFBUUFBQUVBQUFCQUVBQUFCQUFBQVFBUUFBQUVBQUFCQUFBQVFCQUFBQVFBQUFFQUFBQkFFQUFBQkFBQUFRQUFBRUFRQUFBRUFBQUJBQUFBUUJBQUFBUUFBQUVBQUFCQUVBQUFCQUFBQVFBUUFCOEJBQUNBSUFBQUNBQUFBZ0FBQUlBZ0FBQUlBQUFDQUFBQWdDQUFBQWdBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFBSUFnQUFBSUFBQUNBQUFBZ0NBQUFBZ0FBQUNBSUFBQUNBQUFBZ0FBQUlBZ0FBQUlBQUFDQUFBQWdDQUFBQWdBQUFJQUFBQ0FJQUFBQ0FBQUFnQUFDdDZBM3RtWldVRnJjOG1BQUFBQUVsRlRrU3VRbUNDIiwgInNpemVzIjogIjUxMng1MTIiLCAidHlwZSI6ICJpbWFnZS9wbmciLCAicHVycG9zZSI6ICJhbnkgbWFza2FibGUifV19">
 <style>
 :root{
+  /* ===== الثيم النهارى (افتراضى) — مستلهم من لوحة النيل الفاتحة ===== */
   --navy:#0e3b5c; --navy2:#15527e; --sand:#c9a55c; --sand2:#e6c987;
-  --ink:#16202b; --paper:#f4f1ea; --card:#ffffff; --line:#d8dde3;
+  --ink:#16202b; --paper:#eef4f8; --card:#ffffff; --line:#d8dde3;
   --ok:#1f8a52; --warn:#c98a16; --bad:#c0392b; --crit:#7d1f1f;
   --cyan:#0fa3b1; --cyan2:#36c5d4; --cyan-soft:#e4f6f8; --water:#3aa7d6;
   --shadow:0 2px 10px rgba(14,59,92,.10);
+  /* رموز قابلة لإعادة التلوين بين الثيمين */
+  --app-grad-a:#0e3b5c; --app-grad-b:#15527e;
+  --hero-grad-a:#0e3b5c; --hero-grad-b:#15527e;
+  --page-grad:linear-gradient(180deg,#e8f1f7 0%,#eef4f8 38%,#f1f5f3 100%);
+  --card-h-grad:linear-gradient(90deg,#fafbfc,#fff);
+  --ink-soft:#5a6b7a; --input-bg:#fcfcfd; --tile-bg:#f7fafc;
+  --muted:#7a8895; --accent:#0e3b5c; --num:#0e3b5c;
+  --chip-ok-bg:#e3f5ec; --chip-warn-bg:#fbf0d9; --chip-bad-bg:#fbe3e0; --chip-crit-bg:#f3d6d6; --chip-info-bg:#e2edf6;
+  --before-bg:#f4f1ea; --navbg:#ffffff; --navline:#e2e8ee; --bot-bg:#ffffff; --bot-ink:#1a2a35;
+}
+html[data-theme="dark"]{
+  /* ===== الثيم الليلى — مستلهم من لوحة النيل الداكنة الفخمة ===== */
+  --navy:#7ec8e8; --navy2:#4aa3d0; --sand:#d8b56a; --sand2:#ecd08a;
+  --ink:#e6eef5; --paper:#0a1622; --card:#10243a; --line:#1d3b57;
+  --ok:#35c08a; --warn:#e0b057; --bad:#e8746b; --crit:#ff6b6b;
+  --cyan:#36c5d4; --cyan2:#5bd9e6; --cyan-soft:#0e3346; --water:#3aa7d6;
+  --shadow:0 4px 18px rgba(0,0,0,.45);
+  --app-grad-a:#0a2236; --app-grad-b:#0d3050;
+  --hero-grad-a:#0d2a44; --hero-grad-b:#114063;
+  --page-grad:radial-gradient(1200px 600px at 70% -10%,#143a5e 0%,#0a1622 55%),linear-gradient(180deg,#0a1622,#08111c);
+  --card-h-grad:linear-gradient(90deg,#12283f,#10243a);
+  --ink-soft:#9fb4c7; --input-bg:#0c1d30; --tile-bg:#0e2236;
+  --muted:#7e95a9; --accent:#7ec8e8; --num:#9bd6f0;
+  --chip-ok-bg:#0e3a2a; --chip-warn-bg:#3a2f12; --chip-bad-bg:#3d1f1c; --chip-crit-bg:#45201f; --chip-info-bg:#10304a;
+  --before-bg:#0c2032; --navbg:#0c1f33; --navline:#1d3b57; --bot-bg:#10243a; --bot-ink:#dce8f2;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
 body{
   font-family:"Cairo","Segoe UI",Tahoma,sans-serif;
   background:var(--paper); color:var(--ink);
+  background-image:var(--page-grad); background-attachment:fixed;
   font-size:15px; line-height:1.6; padding-bottom:74px;
+  transition:background-color .35s ease, color .35s ease;
 }
 @font-face{font-family:"Cairo";src:local("Cairo");font-display:swap}
 .app-bar{
   position:sticky; top:0; z-index:50;
-  background:linear-gradient(135deg,var(--navy),var(--navy2));
+  background:linear-gradient(135deg,var(--app-grad-a),var(--app-grad-b));
   color:#fff; padding:14px 16px; box-shadow:var(--shadow);
 }
 .app-bar h1{margin:0;font-size:18px;font-weight:700;letter-spacing:.2px}
 .app-bar .sub{font-size:11.5px;opacity:.82;margin-top:2px;font-weight:300}
 .app-bar .badge{
-  float:left;background:var(--sand);color:var(--navy);
+  float:left;background:var(--sand);color:#0a2236;
   font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin-top:3px
 }
+.theme-toggle{
+  float:left;margin:1px 8px 0 0;cursor:pointer;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.28);
+  color:#fff;width:30px;height:30px;border-radius:50%;font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:background .2s
+}
+.theme-toggle:active{background:rgba(255,255,255,.32)}
 .wrap{padding:14px;max-width:760px;margin:0 auto}
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-.hero{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:16px;padding:16px;margin-bottom:14px;color:#fff;box-shadow:var(--shadow)}
+.hero{background:linear-gradient(135deg,var(--hero-grad-a),var(--hero-grad-b));border-radius:16px;padding:16px;margin-bottom:14px;color:#fff;box-shadow:var(--shadow)}
 .hero .ht{font-size:12px;opacity:.8;font-weight:600}
 .hero .hrow{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:8px}
 .hero .hbig{font-size:24px;font-weight:800;line-height:1.1}
@@ -47,12 +82,12 @@ body{
 .hero .haccent{color:var(--sand2)}
 .stat{background:var(--card);border-radius:12px;padding:11px 8px;text-align:center;box-shadow:var(--shadow);border-top:3px solid var(--sand)}
 .stat .num{font-size:21px;font-weight:800;color:var(--navy);line-height:1}
-.stat .lbl{font-size:10.5px;color:#5a6672;margin-top:5px;font-weight:600}
+.stat .lbl{font-size:10.5px;color:var(--ink-soft);margin-top:5px;font-weight:600}
 .stat.danger{border-top-color:var(--bad)}.stat.danger .num{color:var(--bad)}
 .stat.warn{border-top-color:var(--warn)}.stat.warn .num{color:var(--warn)}
 .stat.ok{border-top-color:var(--ok)}.stat.ok .num{color:var(--ok)}
 .card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden}
-.card-h{padding:12px 14px;background:linear-gradient(90deg,#fafbfc,#fff);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.card-h{padding:12px 14px;background:var(--card-h-grad);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
 .card-h .t{font-weight:700;color:var(--navy);font-size:15px}
 .card-b{padding:14px}
 /* Glassmorphism KPI tiles for the efficiency gauge card */
@@ -61,8 +96,8 @@ body{
   border:1px solid rgba(15,163,177,.22);border-radius:14px;padding:12px 14px;flex:1;min-width:120px;
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-align:center}
 .glass-tile .gt-num{font-size:22px;font-weight:800;color:var(--navy);line-height:1.1}
-.glass-tile .gt-lbl{font-size:11.5px;color:#5a6a76;margin-top:3px}
-.glass-tile .gt-sub{font-size:10.5px;color:#8a96a2;margin-top:1px}
+.glass-tile .gt-lbl{font-size:11.5px;color:var(--ink-soft);margin-top:3px}
+.glass-tile .gt-sub{font-size:10.5px;color:var(--muted);margin-top:1px}
 /* Scenario editor */
 .scn-row{margin:12px 0}
 .scn-row label{display:flex;justify-content:space-between;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:5px}
@@ -70,11 +105,11 @@ body{
 .scn-row input[type=range]{width:100%;accent-color:var(--cyan);height:26px}
 .scn-cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .scn-box{border-radius:12px;padding:12px;text-align:center}
-.scn-box.before{background:#f4f1ea;border:1px solid var(--line)}
+.scn-box.before{background:var(--before-bg);border:1px solid var(--line)}
 .scn-box.after{background:linear-gradient(135deg,rgba(15,163,177,.12),rgba(58,167,214,.07));border:1px solid rgba(15,163,177,.3)}
 .scn-box .sb-h{font-size:12px;font-weight:800;margin-bottom:6px}
 .scn-box .sb-q{font-size:24px;font-weight:800;line-height:1.1}
-.scn-box .sb-u{font-size:10.5px;color:#8a96a2}
+.scn-box .sb-u{font-size:10.5px;color:var(--muted)}
 .scn-delta{text-align:center;font-weight:800;font-size:14px;margin:10px 0;padding:8px;border-radius:10px}
 .scn-presets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 2px}
 .scn-presets button{flex:1;min-width:72px;font-size:11.5px;padding:7px 4px;border-radius:9px;border:1px solid var(--cyan);background:var(--cyan-soft);color:var(--navy);font-weight:700;cursor:pointer}
@@ -87,57 +122,57 @@ body{
 .btn-pri{background:var(--navy);color:#fff}
 .btn-pri:active{background:var(--navy2)}
 .btn-sand{background:var(--sand);color:var(--navy)}
-.btn-out{background:#fff;color:var(--navy);border:1.5px solid var(--navy)}
+.btn-out{background:var(--card);color:var(--accent);border:1.5px solid var(--accent)}
 .btn-danger{background:var(--bad);color:#fff}
 .btn-soft{background:var(--cyan-soft,#e6f3f7);color:var(--navy);border:1px solid var(--cyan,#2a9fc4)}
 .ai-msg{margin-bottom:8px;padding:8px 11px;border-radius:10px;line-height:1.7;max-width:90%}
 .ai-user{background:var(--navy);color:#fff;margin-right:auto;margin-left:0;border-bottom-right-radius:3px}
-.ai-bot{background:#fff;color:#1a2a35;border:1px solid var(--line);margin-left:auto;margin-right:0;border-bottom-left-radius:3px}
+.ai-bot{background:var(--bot-bg);color:var(--bot-ink);border:1px solid var(--line);margin-left:auto;margin-right:0;border-bottom-left-radius:3px}
 .btn-sm{padding:7px 12px;font-size:12.5px;width:auto}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-label.fl{display:block;font-size:12.5px;font-weight:700;color:#42505c;margin:10px 0 4px}
+label.fl{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:10px 0 4px}
 input,select,textarea{
   width:100%;font-family:inherit;font-size:14px;padding:9px 11px;
-  border:1.4px solid var(--line);border-radius:9px;background:#fcfcfd;color:var(--ink)
+  border:1.4px solid var(--line);border-radius:9px;background:var(--input-bg);color:var(--ink)
 }
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
 textarea{resize:vertical;min-height:64px}
 .chip{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;margin:2px}
-.chip.ok{background:#e3f5ec;color:var(--ok)}
-.chip.warn{background:#fbf0d9;color:var(--warn)}
-.chip.bad{background:#fbe3e0;color:var(--bad)}
-.chip.crit{background:#f3d6d6;color:var(--crit)}
-.chip.info{background:#e2edf6;color:var(--navy)}
+.chip.ok{background:var(--chip-ok-bg);color:var(--ok)}
+.chip.warn{background:var(--chip-warn-bg);color:var(--warn)}
+.chip.bad{background:var(--chip-bad-bg);color:var(--bad)}
+.chip.crit{background:var(--chip-crit-bg);color:var(--crit)}
+.chip.info{background:var(--chip-info-bg);color:var(--accent)}
 .canal-item{padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;transition:.12s}
-.canal-item:active{background:#f7f9fb}
+.canal-item:active{background:var(--tile-bg)}
 .canal-item:last-child{border-bottom:none}
 .canal-item .name{font-weight:700;color:var(--navy);font-size:15px}
-.canal-item .meta{font-size:11.5px;color:#6a7682;margin-top:3px}
+.canal-item .meta{font-size:11.5px;color:var(--ink-soft);margin-top:3px}
 .canal-item .sev{float:left}
 .tabbar{
   position:fixed;bottom:0;left:0;right:0;z-index:60;
-  background:#fff;border-top:1px solid var(--line);
+  background:var(--navbg);border-top:1px solid var(--navline);
   display:grid;grid-template-columns:repeat(5,1fr);
   box-shadow:0 -2px 12px rgba(0,0,0,.06)
 }
 .tabbar button{
   background:none;border:none;padding:8px 4px 7px;font-family:inherit;
-  font-size:10.5px;font-weight:700;color:#8a96a2;cursor:pointer;display:flex;
+  font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;
   flex-direction:column;align-items:center;gap:3px
 }
-.tabbar button.active{color:var(--navy)}
+.tabbar button.active{color:var(--accent)}
 .tabbar button .ic{font-size:19px;line-height:1}
 .tabbar button.active .ic{transform:translateY(-1px)}
 .view{display:none}.view.active{display:block}
 .sec-title{font-size:13px;font-weight:800;color:var(--navy);margin:16px 0 8px;padding-right:10px;border-right:4px solid var(--sand)}
-.form-grid{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:#fcfdfe}
+.form-grid{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--input-bg)}
 .form-grid > .fh{font-weight:800;color:var(--navy2);font-size:13.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .form-grid .fnum{background:var(--navy);color:#fff;font-size:11px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
 .diag{border-radius:10px;padding:11px 13px;margin-bottom:9px;border-right:4px solid}
-.diag.bad{background:#fdf2f1;border-color:var(--bad)}
-.diag.warn{background:#fdf8ec;border-color:var(--warn)}
-.diag.ok{background:#f0f9f3;border-color:var(--ok)}
+.diag.bad{background:var(--chip-bad-bg);border-color:var(--bad)}
+.diag.warn{background:var(--chip-warn-bg);border-color:var(--warn)}
+.diag.ok{background:var(--chip-ok-bg);border-color:var(--ok)}
 .diag .dh{font-weight:800;font-size:13.5px;margin-bottom:3px}
 .diag .dd{font-size:12.5px;color:#48535e}
 .sol-list{margin:6px 0 0;padding:0;list-style:none}
@@ -154,8 +189,8 @@ textarea{resize:vertical;min-height:64px}
 .sheet-h .x{background:rgba(255,255,255,.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:18px;cursor:pointer}
 .sheet-b{padding:16px}
 .tog{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
-.tog button{flex:1;min-width:60px;background:#fff;border:1.4px solid var(--line);border-radius:9px;padding:8px 4px;font-family:inherit;font-size:12px;font-weight:700;color:#5a6672;cursor:pointer}
-.tog button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tog button{flex:1;min-width:60px;background:var(--card);border:1.4px solid var(--line);border-radius:9px;padding:8px 4px;font-family:inherit;font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.tog button.on{background:linear-gradient(135deg,var(--app-grad-a),var(--app-grad-b));color:#fff;border-color:var(--app-grad-b)}
 .tog button.on.sev-warn{background:var(--warn);border-color:var(--warn)}
 .tog button.on.sev-bad{background:var(--bad);border-color:var(--bad)}
 .tog button.on.sev-ok{background:var(--ok);border-color:var(--ok)}
@@ -163,8 +198,8 @@ textarea{resize:vertical;min-height:64px}
 .search-bar input{flex:1}
 .fab{position:fixed;bottom:84px;left:16px;z-index:55;width:56px;height:56px;border-radius:50%;background:var(--sand);color:var(--navy);border:none;font-size:28px;font-weight:300;box-shadow:0 4px 14px rgba(201,165,92,.5);cursor:pointer}
 .pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;overflow-x:auto}
-.pill{white-space:nowrap;background:#fff;border:1.3px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:700;color:#5a6672;cursor:pointer}
-.pill.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pill{white-space:nowrap;background:var(--card);border:1.3px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12px;font-weight:700;color:var(--ink-soft);cursor:pointer}
+.pill.on{background:linear-gradient(135deg,var(--app-grad-a),var(--app-grad-b));color:#fff;border-color:var(--app-grad-b)}
 .kv{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px}
 .kv .k{color:#6a7682;font-weight:600}.kv .v{font-weight:700;color:var(--ink)}
 .bar-track{height:8px;background:#eef1f4;border-radius:6px;overflow:hidden;margin-top:4px}
@@ -201,11 +236,70 @@ table.boq tr.boq-total td{background:#f7f3ec;font-weight:800;color:var(--navy)}
 hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 .toast{position:fixed;bottom:90px;right:16px;left:16px;z-index:200;background:var(--navy);color:#fff;padding:12px 16px;border-radius:12px;font-size:13.5px;font-weight:700;text-align:center;box-shadow:var(--shadow);opacity:0;transform:translateY(10px);transition:.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
+
+/* ===== مكونات الداشبورد المبهرة (مستلهمة من لوحة النيل) ===== */
+/* كروت إحصائيات بالأمواج والأيقونات */
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
+@media(min-width:560px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+.kpi-card{position:relative;overflow:hidden;background:var(--card);border-radius:16px;padding:14px 14px 30px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.kpi-card .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.kpi-card .kpi-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.kpi-card .kpi-lbl{font-size:12px;font-weight:700;color:var(--ink-soft)}
+.kpi-card .kpi-num{font-size:26px;font-weight:800;line-height:1;color:var(--num)}
+.kpi-card .kpi-unit{font-size:11px;color:var(--muted);margin-top:3px}
+.kpi-wave{position:absolute;left:0;right:0;bottom:0;height:26px;opacity:.5}
+.kpi-card.k-total .kpi-ico{background:var(--chip-info-bg);color:var(--accent)}
+.kpi-card.k-tired .kpi-ico{background:var(--chip-warn-bg);color:var(--warn)}
+.kpi-card.k-crit  .kpi-ico{background:var(--chip-crit-bg);color:var(--crit)}
+.kpi-card.k-cost  .kpi-ico{background:var(--chip-ok-bg);color:var(--ok)}
+.kpi-card.k-zam   .kpi-ico{background:var(--cyan-soft);color:var(--cyan)}
+.kpi-card.k-prob  .kpi-ico{background:var(--chip-warn-bg);color:var(--warn)}
+.kpi-card.k-crit .kpi-num{color:var(--bad)}
+/* دونات توزيع الحالات */
+.donut-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:center}
+.donut{position:relative;width:150px;height:150px;flex:0 0 auto}
+.donut svg{transform:rotate(-90deg)}
+.donut .donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.donut .dc-num{font-size:26px;font-weight:800;color:var(--num);line-height:1}
+.donut .dc-lbl{font-size:11px;color:var(--muted);margin-top:2px}
+.donut-legend{flex:1;min-width:150px}
+.dleg-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px}
+.dleg-dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.dleg-name{font-weight:700;color:var(--ink)}
+.dleg-val{margin-right:auto;font-weight:800;color:var(--ink-soft);font-size:12.5px}
+/* قائمة أحدث الترع بالكفاءة */
+.eff-item{display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line)}
+.eff-item:last-child{border-bottom:none}
+.eff-ring{width:46px;height:46px;flex:0 0 auto;position:relative}
+.eff-ring svg{transform:rotate(-90deg)}
+.eff-ring .er-txt{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.eff-info{flex:1;min-width:0}
+.eff-name{font-weight:700;color:var(--ink);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eff-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.eff-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+/* شريط التنبيهات الملون */
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:12px;margin-bottom:8px;border-right:4px solid}
+.alert-item .al-ico{font-size:16px;flex:0 0 auto;line-height:1.4}
+.alert-item .al-txt{flex:1;font-size:12.5px;font-weight:600;line-height:1.5;color:var(--ink)}
+.alert-item.al-crit{background:var(--chip-crit-bg);border-color:var(--crit)}
+.alert-item.al-warn{background:var(--chip-warn-bg);border-color:var(--warn)}
+.alert-item.al-info{background:var(--chip-info-bg);border-color:var(--accent)}
+.dash-sec-h{font-size:14px;font-weight:800;color:var(--accent);margin:2px 0 10px;display:flex;align-items:center;gap:7px}
+.dash-sec-h .dsh-line{flex:1;height:1px;background:var(--line)}
 </style>
+
+<svg width="0" height="0" style="position:absolute"><defs>
+<linearGradient id="wave-blue" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3aa7d6" stop-opacity=".5"/><stop offset="1" stop-color="#3aa7d6" stop-opacity="0"/></linearGradient>
+<linearGradient id="wave-gold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c98a16" stop-opacity=".5"/><stop offset="1" stop-color="#c98a16" stop-opacity="0"/></linearGradient>
+<linearGradient id="wave-red" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#c0392b" stop-opacity=".5"/><stop offset="1" stop-color="#c0392b" stop-opacity="0"/></linearGradient>
+<linearGradient id="wave-green" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#1f8a52" stop-opacity=".5"/><stop offset="1" stop-color="#1f8a52" stop-opacity="0"/></linearGradient>
+<linearGradient id="wave-cyan" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0fa3b1" stop-opacity=".5"/><stop offset="1" stop-color="#0fa3b1" stop-opacity="0"/></linearGradient>
+</defs></svg>
 </head>
 <body>
 <div class="app-bar">
   <span class="badge" id="ver">v1.0</span>
+  <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
 </div>
@@ -214,17 +308,27 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 <div class="view active" id="v-dash">
   <div class="wrap">
     <div class="hero" id="hero-kpi"></div>
-    <select id="dash-admin" onchange="setDashAdmin(this.value)" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px;margin-bottom:10px;font-weight:700;color:var(--navy)"></select>
-    <div class="stat-row">
-      <div class="stat"><div class="num" id="s-total">0</div><div class="lbl" id="s-total-lbl">إجمالى الترع</div></div>
-      <div class="stat danger"><div class="num" id="s-crit">0</div><div class="lbl">حرجة</div></div>
-      <div class="stat warn"><div class="num" id="s-prob">0</div><div class="lbl">مشاكل مرصودة</div></div>
-      <div class="stat ok"><div class="num" id="s-len">0</div><div class="lbl">كم متعب</div></div>
+    <select id="dash-admin" onchange="setDashAdmin(this.value)" style="width:100%;padding:10px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px;margin-bottom:14px;font-weight:700;color:var(--accent);background:var(--card)"></select>
+
+    <!-- كروت الإحصائيات بالأمواج -->
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <!-- دونات توزيع الحالات -->
+    <div class="card">
+      <div class="card-h"><span class="t">توزيع الحالات</span></div>
+      <div class="card-b"><div class="donut-wrap" id="donut-wrap"></div></div>
     </div>
 
+    <!-- شريط التنبيهات -->
     <div class="card">
-      <div class="card-h"><span class="t">توزيع شدة الحالة</span></div>
-      <div class="card-b" id="sev-dist"></div>
+      <div class="card-h"><span class="t">المنبهات والتنبيهات</span></div>
+      <div class="card-b" id="alerts-box"></div>
+    </div>
+
+    <!-- أحدث الترع بالكفاءة -->
+    <div class="card">
+      <div class="card-h"><span class="t">أبرز الترع — مؤشر الحالة</span><button class="btn btn-out btn-sm" onclick="nav('list')">الكل ›</button></div>
+      <div class="card-b" id="eff-list"></div>
     </div>
 
     <div class="card">
@@ -523,11 +627,33 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v7.0';
+var APP_VER = 'v8.1';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
 var listFilter = 'all';
+
+/* ===== الثيم (نهارى/ليلى) ===== */
+var THEME_KEY = 'tired_canals_theme';
+function applyTheme(t){
+  var html = document.documentElement;
+  if(t==='dark') html.setAttribute('data-theme','dark');
+  else html.removeAttribute('data-theme');
+  var btn = document.getElementById('theme-btn');
+  if(btn) btn.textContent = (t==='dark') ? '☀️' : '🌙';
+}
+function loadTheme(){
+  var t = 'light';
+  try{ t = localStorage.getItem(THEME_KEY) || 'light'; }catch(e){}
+  applyTheme(t);
+}
+function toggleTheme(){
+  var cur = 'light';
+  try{ cur = localStorage.getItem(THEME_KEY) || 'light'; }catch(e){}
+  var next = (cur==='dark') ? 'light' : 'dark';
+  try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  applyTheme(next);
+}
 
 function loadDB(){
   try{
@@ -2762,12 +2888,6 @@ function renderDash(){
   var tiredLen = canals.reduce(function(a,c){return a+normLenKm(c.f8_tired_len);},0);
   var totalCost = canals.reduce(function(a,c){return a+((c._cost&&c._cost.total)?c._cost.total:0);},0);
   var totalZam = affectedZam(canals);
-  document.getElementById('s-total').textContent = cc.units;
-  var lblEl = document.getElementById('s-total-lbl');
-  if(lblEl) lblEl.textContent = (cc.reaches!==cc.units)? ('ترعة فعلية ('+cc.reaches+' حبس)') : 'إجمالى الترع';
-  document.getElementById('s-crit').textContent = crit;
-  document.getElementById('s-prob').textContent = probs;
-  document.getElementById('s-len').textContent = Math.round(tiredLen*10)/10;
 
   // hero KPI band
   var scope = dashAdmin ? esc(dashAdmin) : 'على مستوى الجمهورية';
@@ -2778,17 +2898,89 @@ function renderDash(){
   hero += '</div>';
   document.getElementById('hero-kpi').innerHTML = hero;
 
-  // severity distribution
+  // ===== كروت الإحصائيات بالأمواج =====
+  var wave = function(g){ return '<svg class="kpi-wave" viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 14 Q 15 6 30 14 T 60 14 T 90 14 T 120 14 V26 H0 Z" fill="url(#'+g+')"/></svg>'; };
+  var kpis = [
+    {cls:'k-total', ico:'💧', num:cc.units, unit:(cc.reaches!==cc.units?('ترعة فعلية ('+cc.reaches+' حبس)'):'إجمالى الترع'), lbl:'إجمالى الترع', w:'wave-blue'},
+    {cls:'k-crit', ico:'⚠️', num:crit, unit:'ترعة حرجة', lbl:'الحرجة', w:'wave-red'},
+    {cls:'k-prob', ico:'📋', num:probs, unit:'مشكلة مرصودة', lbl:'المشاكل', w:'wave-gold'},
+    {cls:'k-tired', ico:'〰️', num:Math.round(tiredLen*10)/10, unit:'كم متعب', lbl:'الطول المتعب', w:'wave-gold'},
+    {cls:'k-zam', ico:'🌾', num:fmt(round0(totalZam)), unit:'فدان متأثر', lbl:'الزمام', w:'wave-cyan'},
+    {cls:'k-cost', ico:'💰', num:fmtEGP(totalCost), unit:'تقديرية للتأهيل', lbl:'التكلفة', w:'wave-green'}
+  ];
+  var kg = kpis.map(function(k){
+    return '<div class="kpi-card '+k.cls+'">'+
+      '<div class="kpi-top"><span class="kpi-lbl">'+k.lbl+'</span><span class="kpi-ico">'+k.ico+'</span></div>'+
+      '<div class="kpi-num">'+k.num+'</div><div class="kpi-unit">'+k.unit+'</div>'+
+      wave(k.w)+'</div>';
+  }).join('');
+  var kgEl=document.getElementById('kpi-grid'); if(kgEl) kgEl.innerHTML=kg;
+
+  // ===== دونات توزيع الحالات =====
   var dist = {crit:0,bad:0,warn:0,ok:0};
   canals.forEach(function(c){ dist[c._sev]=(dist[c._sev]||0)+1; });
-  var maxD = Math.max(1, dist.crit, dist.bad, dist.warn, dist.ok);
-  var colors = {crit:'var(--crit)',bad:'var(--bad)',warn:'var(--warn)',ok:'var(--ok)'};
-  var sd = '';
-  ['crit','bad','warn','ok'].forEach(function(k){
-    sd += '<div class="kv"><span class="k">'+SEV_LABEL[k]+'</span><span class="v">'+dist[k]+' ترعة</span></div>';
-    sd += '<div class="bar-track"><div class="bar-fill" style="width:'+(dist[k]/maxD*100)+'%;background:'+colors[k]+'"></div></div><div style="height:8px"></div>';
-  });
-  document.getElementById('sev-dist').innerHTML = cc.reaches? sd : emptyMsg('لا توجد بيانات بعد');
+  var donutEl = document.getElementById('donut-wrap');
+  if(donutEl){
+    var total = dist.crit+dist.bad+dist.warn+dist.ok;
+    if(!total){ donutEl.innerHTML = emptyMsg('لا توجد بيانات بعد'); }
+    else {
+      var segs=[{k:'ok',c:'#1f8a52',n:dist.ok},{k:'warn',c:'#c98a16',n:dist.warn},{k:'bad',c:'#c0392b',n:dist.bad},{k:'crit',c:'#7d1f1f',n:dist.crit}];
+      var R=60, C=2*Math.PI*R, off=0;
+      var circles='';
+      segs.forEach(function(s){
+        if(s.n<=0) return;
+        var frac=s.n/total, len=frac*C;
+        circles += '<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="'+s.c+'" stroke-width="22" stroke-dasharray="'+len+' '+(C-len)+'" stroke-dashoffset="'+(-off)+'"/>';
+        off += len;
+      });
+      var dsvg='<div class="donut"><svg width="150" height="150" viewBox="0 0 150 150">'+circles+'</svg>'+
+        '<div class="donut-center"><div class="dc-num">'+total+'</div><div class="dc-lbl">ترعة</div></div></div>';
+      var leg='<div class="donut-legend">'+segs.map(function(s){
+        var pct=total?Math.round(s.n/total*100):0;
+        return '<div class="dleg-row"><span class="dleg-dot" style="background:'+s.c+'"></span><span class="dleg-name">'+SEV_LABEL[s.k]+'</span><span class="dleg-val">'+s.n+' ('+pct+'%)</span></div>';
+      }).join('')+'</div>';
+      donutEl.innerHTML = dsvg+leg;
+    }
+  }
+
+  // ===== شريط التنبيهات (مولّد من البيانات الفعلية) =====
+  var alertsEl = document.getElementById('alerts-box');
+  if(alertsEl){
+    var al=[];
+    var critList = canals.filter(function(c){return c._sev==='crit';}).sort(function(a,b){return (b._pri?b._pri.total:0)-(a._pri?a._pri.total:0);});
+    critList.slice(0,2).forEach(function(c){
+      al.push({t:'crit', ico:'🔴', x:'ترعة '+esc(c.f8_name)+' ('+esc(c.f8_admin||'')+') — حالة حرجة تحتاج تدخّلاً عاجلاً'});
+    });
+    var seep = canals.filter(function(c){return (c._diag||[]).some(function(d){return d.key==='seepage';});});
+    if(seep.length) al.push({t:'warn', ico:'⚠️', x:'رصد مشاكل رشح فى '+seep.length+' ترعة — يُنصح بالمعالجة قبل تفاقمها'});
+    var enc = canals.filter(function(c){return (c._diag||[]).some(function(d){return d.key==='encroachment';});});
+    if(enc.length) al.push({t:'warn', ico:'⚠️', x:'وجود تعديات على '+enc.length+' ترعة — تتطلب إجراءات إزالة'});
+    al.push({t:'info', ico:'ℹ️', x:'إجمالى '+probs+' مشكلة مرصودة على '+cc.units+' ترعة، بتكلفة تأهيل تقديرية '+fmtEGP(totalCost)});
+    alertsEl.innerHTML = al.slice(0,5).map(function(a){
+      return '<div class="alert-item al-'+a.t+'"><span class="al-ico">'+a.ico+'</span><span class="al-txt">'+a.x+'</span></div>';
+    }).join('');
+  }
+
+  // ===== أبرز الترع بمؤشر الحالة (حلقة كفاءة) =====
+  var effEl = document.getElementById('eff-list');
+  if(effEl){
+    var topEff = canals.slice().sort(function(a,b){return (b._pri?b._pri.total:0)-(a._pri?a._pri.total:0);}).slice(0,6);
+    var sevColor={crit:'#7d1f1f',bad:'#c0392b',warn:'#c98a16',ok:'#1f8a52'};
+    var sevBadgeBg={crit:'var(--chip-crit-bg)',bad:'var(--chip-bad-bg)',warn:'var(--chip-warn-bg)',ok:'var(--chip-ok-bg)'};
+    effEl.innerHTML = topEff.length? topEff.map(function(c){
+      var pv=c._pri?Math.round(c._pri.total):0;
+      var col=sevColor[c._sev]||'#888';
+      var R=20,C=2*Math.PI*R,len=pv/100*C;
+      var ring='<div class="eff-ring"><svg width="46" height="46" viewBox="0 0 46 46">'+
+        '<circle cx="23" cy="23" r="20" fill="none" stroke="var(--line)" stroke-width="5"/>'+
+        '<circle cx="23" cy="23" r="20" fill="none" stroke="'+col+'" stroke-width="5" stroke-linecap="round" stroke-dasharray="'+len+' '+(C-len)+'"/>'+
+        '</svg><span class="er-txt" style="color:'+col+'">'+pv+'</span></div>';
+      return '<div class="eff-item" onclick="openDetail(\''+c.id+'\')" style="cursor:pointer">'+ring+
+        '<div class="eff-info"><div class="eff-name">'+esc(c.f8_name)+'</div>'+
+        '<div class="eff-meta">'+esc(c.f8_admin||'')+' · '+(c._diag?c._diag.length:0)+' مشكلة</div></div>'+
+        '<span class="eff-badge" style="background:'+sevBadgeBg[c._sev]+';color:'+col+'">'+SEV_LABEL[c._sev]+'</span></div>';
+    }).join('') : emptyMsg('لا توجد بيانات بعد');
+  }
 
   // ===== technical indicators (from the 7 advanced analyses) =====
   renderTechIndicators(canals);
@@ -2853,7 +3045,7 @@ function renderTechIndicators(canals){
   var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">';
   items.forEach(function(it){
     if(ind[it.k]>0){
-      h += '<div style="border:1px solid var(--line);border-radius:10px;padding:10px;background:#fafbfc">'+
+      h += '<div style="border:1px solid var(--line);border-radius:10px;padding:10px;background:var(--tile-bg)">'+
         '<div style="font-size:22px;font-weight:800;color:'+it.col+'">'+ind[it.k]+'</div>'+
         '<div style="font-size:11px;color:#56636f;line-height:1.4">'+it.icon+' '+it.lbl+'</div></div>';
     }
@@ -3339,11 +3531,11 @@ function buildDecisionEngine(c){
     var solLbl = (DESIGN_MODULES[solKey] && DESIGN_MODULES[solKey].label) || (lib && lib.tiers && lib.tiers[0] ? lib.tiers[0].name : 'تدخل هندسى');
     var imp = estimateImprovement(c, solKey);
 
-    h.push('<div style="border:1px solid var(--line);border-right:4px solid '+col+';border-radius:10px;padding:12px;margin-bottom:10px;background:#fafbfc">');
+    h.push('<div style="border:1px solid var(--line);border-right:4px solid '+col+';border-radius:10px;padding:12px;margin-bottom:10px;background:var(--tile-bg)">');
     // العنوان: المشكلة + الخطورة
     h.push('<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">');
     h.push('<span style="font-weight:800;font-size:13px;color:var(--navy)">'+(i+1)+'. '+(lib?lib.label:d.key)+'</span>');
-    h.push('<span style="font-weight:700;font-size:11px;color:'+col+';background:#fff;border:1px solid '+col+';border-radius:20px;padding:2px 10px">'+(SEV_LABEL[d.sev]||'')+'</span>');
+    h.push('<span style="font-weight:700;font-size:11px;color:'+col+';background:var(--card);border:1px solid '+col+';border-radius:20px;padding:2px 10px">'+(SEV_LABEL[d.sev]||'')+'</span>');
     h.push('</div>');
     // السلسلة
     var chain = [];
@@ -4193,6 +4385,7 @@ function engineSelfTest(){
 try{
 document.getElementById('ver').textContent = APP_VER;
 engineSelfTest();
+loadTheme();
 loadDB();
 loadCloudCfg();
 refreshAll();
@@ -4226,7 +4419,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v7-0';
+  var SW_VER = 'tired-canals-v8-1';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
