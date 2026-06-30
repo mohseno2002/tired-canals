@@ -350,6 +350,13 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div class="card-h"><span class="t">أولويات التدخل (مؤشر مرجّح /100)</span><button class="btn btn-out btn-sm" onclick="nav('plan')">الخطة الكاملة ›</button></div>
       <div class="card-b" id="priority-list"></div>
     </div>
+
+    <div class="card">
+      <div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-out btn-sm" onclick="nav('sol')" style="flex:1">⚙ مكتبة الحلول الهندسية</button>
+        <button class="btn btn-out btn-sm" onclick="nav('info')" style="flex:1">ℹ️ عن التطبيق والنماذج</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -470,10 +477,35 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 <div class="tabbar">
   <button class="active" data-v="dash" onclick="nav('dash')"><span class="ic">▣</span>لوحة</button>
   <button data-v="list" onclick="nav('list')"><span class="ic">≣</span>الترع</button>
+  <button data-v="gantt" onclick="nav('gantt')"><span class="ic">📅</span>الجدول</button>
   <button data-v="plan" onclick="nav('plan')"><span class="ic">★</span>الخطة</button>
-  <button data-v="sol" onclick="nav('sol')"><span class="ic">⚙</span>الحلول</button>
   <button data-v="rep" onclick="nav('rep')"><span class="ic">⤓</span>تقارير</button>
 </div>
+
+<!-- ========== VIEW: GANTT SCHEDULE ========== -->
+<div class="view" id="v-gantt">
+  <div class="wrap">
+    <div class="card">
+      <div class="card-h"><span class="t">الجدول الزمنى للمشروع</span><span class="chip info">5 أشهر</span></div>
+      <div class="card-b">
+        <label class="fl">تاريخ بداية المشروع</label>
+        <input type="date" id="gantt-start" onchange="setGanttStart(this.value)" style="width:100%">
+        <div class="note" style="margin-top:6px">حدّد التاريخ ليحسب النظام مواعيد كل نشاط ويكشف المتأخرات تلقائياً.</div>
+      </div>
+    </div>
+    <div id="gantt-summary"></div>
+    <div class="card">
+      <div class="card-h"><span class="t">المنبهات والمتابعة</span></div>
+      <div class="card-b" id="gantt-alerts"></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><span class="t">أنشطة المشروع</span><span class="chip info">حدّث نسبة الإنجاز</span></div>
+      <div class="card-b" id="gantt-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== VIEW: SOLUTIONS LIBRARY (moved access) ========== -->
 
 <!-- ========== VIEW: PLAN (top 20 / 90-day) ========== -->
 <div class="view" id="v-plan">
@@ -627,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.1';
+var APP_VER = 'v8.3';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -2864,6 +2896,91 @@ function refreshAll(){
 }
 
 var dashAdmin = '';   // فلتر لوحة القيادة بالإدارة
+
+/* ============================================================
+   الجدول الزمنى (Gantt) — متابعة الأنشطة وكشف التأخير
+   البيانات الأساسية من ملف الجدول الزمنى للترع المتعبة (5 أشهر).
+   كل نشاط: id, الاسم, المسئول, المرحلة, الشهر(البداية), المدة(أشهر).
+   حالة التنفيذ تُحفظ محلياً: progress(0-100), startedReal, doneReal.
+   ============================================================ */
+var GANTT_KEY = 'tired_canals_gantt_v1';
+var GANTT_START_KEY = 'tired_canals_gantt_start';   // تاريخ بداية المشروع (ISO)
+var GANTT_SEED = [
+  {id:'1.0', phase:1, name:'ملء الاستبيان', resp:'فريق الحصر الميدانى', month:1, dur:1, main:true, note:'نماذج 1-8 للاستبيان'},
+  {id:'1.1', phase:1, name:'توزيع نماذج الاستبيان على الإدارات', resp:'فريق الحصر الميدانى', month:1, dur:1, main:false},
+  {id:'1.2', phase:1, name:'تدريب الكوادر الهندسية على ملء النماذج الثمانية', resp:'فريق الحصر الميدانى', month:1, dur:1, main:false},
+  {id:'1.3', phase:1, name:'جمع البيانات الأولية من السجلات', resp:'فريق الحصر الميدانى', month:1, dur:1, main:false},
+  {id:'1.4', phase:1, name:'مراجعة الاستمارات المملوءة', resp:'فريق الحصر الميدانى', month:1, dur:1, main:false},
+  {id:'2.0', phase:2, name:'المعاينات من الطبيعة', resp:'فرق المعاينة الميدانية', month:2, dur:1, main:true, note:'جسات — رفع قطاعات — توثيق صور'},
+  {id:'2.1', phase:2, name:'إعداد خطة المعاينة الميدانية وتحديد الأولويات', resp:'فرق المعاينة الميدانية', month:2, dur:1, main:false},
+  {id:'2.2', phase:2, name:'رفع القطاعات الفعلية وأخذ الجسات', resp:'فرق المعاينة الميدانية', month:2, dur:1, main:false},
+  {id:'2.3', phase:2, name:'توثيق الحالة الإنشائية للمنشآت بالصور', resp:'فرق المعاينة الميدانية', month:2, dur:1, main:false},
+  {id:'2.4', phase:2, name:'رصد مشاكل الجسور والرشح والتعديات', resp:'فرق المعاينة الميدانية', month:2, dur:1, main:false},
+  {id:'3.0', phase:3, name:'مراجعة البيانات والتدقيق', resp:'مهندسو المراجعة والتدقيق', month:3, dur:1, main:true, note:'مقارنة الفعلى بالتصميمى'},
+  {id:'3.1', phase:3, name:'مراجعة البيانات المجمّعة ومقارنتها بالأورنيك', resp:'مهندسو المراجعة والتدقيق', month:3, dur:1, main:false},
+  {id:'3.2', phase:3, name:'التحقق من صحة القطاعات والمناسيب', resp:'مهندسو المراجعة والتدقيق', month:3, dur:1, main:false},
+  {id:'3.3', phase:3, name:'رصد التناقضات وطلب تدقيق ميدانى إضافى', resp:'مهندسو المراجعة والتدقيق', month:3, dur:1, main:false},
+  {id:'3.4', phase:3, name:'اعتماد البيانات النهائية من المسؤولين', resp:'مهندسو المراجعة والتدقيق', month:3, dur:1, main:false},
+  {id:'4.0', phase:4, name:'وضع البيانات فى التطبيق', resp:'فريق تقنية المعلومات والهندسة', month:4, dur:2, main:true, note:'إدخال 8 نماذج لكل ترعة'},
+  {id:'4.1', phase:4, name:'إدخال بيانات نموذج التعريف الأساسى', resp:'فريق تقنية المعلومات والهندسة', month:4, dur:2, main:false},
+  {id:'4.2', phase:4, name:'إدخال البيانات الهيدروليكية والتصميمية', resp:'فريق تقنية المعلومات والهندسة', month:4, dur:2, main:false},
+  {id:'4.3', phase:4, name:'إدخال بيانات المنشآت والتطهيرات والجسور', resp:'فريق تقنية المعلومات والهندسة', month:4, dur:2, main:false},
+  {id:'4.4', phase:4, name:'التحقق من اكتمال البيانات وإنتاج التقارير', resp:'فريق تقنية المعلومات والهندسة', month:5, dur:1, main:false}
+];
+var PHASE_NAMES = {1:'ملء الاستبيان', 2:'المعاينات من الطبيعة', 3:'مراجعة البيانات والتدقيق', 4:'وضع البيانات فى التطبيق'};
+var ganttState = {};   // id -> {progress, startedReal, doneReal}
+var ganttStart = null; // تاريخ بداية المشروع
+
+function loadGantt(){
+  try{ ganttState = JSON.parse(localStorage.getItem(GANTT_KEY)) || {}; }catch(e){ ganttState = {}; }
+  try{ ganttStart = localStorage.getItem(GANTT_START_KEY) || null; }catch(e){ ganttStart = null; }
+}
+function saveGantt(){
+  try{ localStorage.setItem(GANTT_KEY, JSON.stringify(ganttState)); }catch(e){}
+}
+function setGanttStart(iso){
+  ganttStart = iso;
+  try{ localStorage.setItem(GANTT_START_KEY, iso); }catch(e){}
+  renderGantt();
+}
+function ganttRec(id){
+  if(!ganttState[id]) ganttState[id] = {progress:0, startedReal:null, doneReal:null};
+  return ganttState[id];
+}
+/* الموعد المخطط لانتهاء النشاط = بداية المشروع + (شهر البداية + المدة -1) شهر */
+function activityDeadline(act){
+  if(!ganttStart) return null;
+  var d = new Date(ganttStart);
+  var endMonthIndex = (act.month - 1) + act.dur;   // عدد الأشهر من البداية حتى الانتهاء
+  d.setMonth(d.getMonth() + endMonthIndex);
+  return d;
+}
+function activityPlannedStart(act){
+  if(!ganttStart) return null;
+  var d = new Date(ganttStart);
+  d.setMonth(d.getMonth() + (act.month - 1));
+  return d;
+}
+function fmtDate(d){
+  if(!d) return '—';
+  try{ return d.toLocaleDateString('ar-EG', {year:'numeric', month:'short', day:'numeric'}); }
+  catch(e){ return d.toISOString().slice(0,10); }
+}
+/* حالة النشاط: done / delayed / active / pending */
+function activityStatus(act){
+  var rec = ganttRec(act.id);
+  if(rec.progress >= 100) return 'done';
+  if(!ganttStart) return rec.progress>0 ? 'active' : 'pending';
+  var now = new Date();
+  var dl = activityDeadline(act);
+  var ps = activityPlannedStart(act);
+  if(dl && now > dl && rec.progress < 100) return 'delayed';
+  if(ps && now >= ps && rec.progress < 100) return 'active';
+  return 'pending';
+}
+function ganttDelayedList(){
+  return GANTT_SEED.filter(function(a){ return activityStatus(a)==='delayed'; });
+}
 function setDashAdmin(v){ dashAdmin = v; renderDash(); }
 
 function renderDash(){
@@ -4281,7 +4398,7 @@ function saveSoil(k,v){ if(!DB.settings)DB.settings={}; if(!DB.settings.soil)DB.
 
 /* ===== Navigation ===== */
 function showView(v){
-  ['dash','list','plan','sol','rep','info','detail'].forEach(function(x){
+  ['dash','list','gantt','plan','sol','rep','info','detail'].forEach(function(x){
     var el = document.getElementById('v-'+x); if(el) el.classList.toggle('active', x===v);
   });
   document.querySelectorAll('.tabbar button').forEach(function(b){ b.classList.toggle('active', b.dataset.v===v); });
@@ -4293,7 +4410,109 @@ function nav(v){
   if(v==='info') renderFormsInfo();
   if(v==='rep'){ renderDataStatus(); fillCloudForm(); }
   if(v==='plan') renderPlan();
+  if(v==='gantt') renderGantt();
   showView(v);
+}
+
+/* ===== عرض الجدول الزمنى ===== */
+var GSTATUS = {
+  done:{lbl:'منجز', col:'var(--ok)', bg:'var(--chip-ok-bg)', ico:'✓'},
+  delayed:{lbl:'متأخر', col:'var(--bad)', bg:'var(--chip-bad-bg)', ico:'⏰'},
+  active:{lbl:'جارٍ', col:'var(--warn)', bg:'var(--chip-warn-bg)', ico:'▶'},
+  pending:{lbl:'لم يبدأ', col:'var(--muted)', bg:'var(--tile-bg)', ico:'○'}
+};
+function renderGantt(){
+  // تاريخ البداية
+  var startInp = document.getElementById('gantt-start');
+  if(startInp && ganttStart) startInp.value = ganttStart.slice(0,10);
+
+  // شريط ملخص + تنبيه التأخيرات
+  var delayed = ganttDelayedList();
+  var done = GANTT_SEED.filter(function(a){return activityStatus(a)==='done';}).length;
+  var active = GANTT_SEED.filter(function(a){return activityStatus(a)==='active';}).length;
+  var total = GANTT_SEED.length;
+  var overall = Math.round(GANTT_SEED.reduce(function(s,a){return s+ganttRec(a.id).progress;},0)/total);
+
+  var sum = '<div class="kpi-grid" style="grid-template-columns:repeat(2,1fr)">';
+  sum += '<div class="kpi-card k-total"><div class="kpi-top"><span class="kpi-lbl">نسبة الإنجاز</span><span class="kpi-ico">📊</span></div><div class="kpi-num">'+overall+'%</div><div class="kpi-unit">من إجمالى الأنشطة</div></div>';
+  sum += '<div class="kpi-card k-crit"><div class="kpi-top"><span class="kpi-lbl">أنشطة متأخرة</span><span class="kpi-ico">⏰</span></div><div class="kpi-num">'+delayed.length+'</div><div class="kpi-unit">تجاوزت موعدها</div></div>';
+  sum += '</div>';
+  var sEl=document.getElementById('gantt-summary'); if(sEl) sEl.innerHTML=sum;
+
+  // تنبيه التأخيرات
+  var alEl = document.getElementById('gantt-alerts');
+  if(alEl){
+    if(!ganttStart){
+      alEl.innerHTML = '<div class="alert-item al-info"><span class="al-ico">ℹ️</span><span class="al-txt">حدّد تاريخ بداية المشروع أعلاه ليبدأ النظام فى متابعة المواعيد وكشف الأنشطة المتأخرة تلقائياً.</span></div>';
+    } else if(delayed.length){
+      alEl.innerHTML = delayed.map(function(a){
+        var dl = activityDeadline(a);
+        return '<div class="alert-item al-crit"><span class="al-ico">⏰</span><span class="al-txt"><b>'+esc(a.name)+'</b> تأخر عن موعده ('+fmtDate(dl)+')<br>المسئول: '+esc(a.resp)+'<br><button class="btn btn-sm" style="margin-top:6px;background:#25D366;color:#fff" onclick="ganttWhatsApp(\''+a.id+'\')">📲 إبلاغ عبر واتساب</button></span></div>';
+      }).join('');
+    } else {
+      alEl.innerHTML = '<div class="alert-item al-info" style="background:var(--chip-ok-bg);border-color:var(--ok)"><span class="al-ico">✓</span><span class="al-txt">لا توجد أنشطة متأخرة حالياً. كل الأنشطة ضمن المواعيد المخططة.</span></div>';
+    }
+  }
+
+  // قائمة الأنشطة مجمّعة بالمراحل
+  var box = document.getElementById('gantt-list');
+  if(!box) return;
+  var html = '';
+  [1,2,3,4].forEach(function(ph){
+    var acts = GANTT_SEED.filter(function(a){return a.phase===ph;});
+    var phActs = acts.filter(function(a){return !a.main;});
+    var mainAct = acts.filter(function(a){return a.main;})[0];
+    var phProg = Math.round(phActs.reduce(function(s,a){return s+ganttRec(a.id).progress;},0)/(phActs.length||1));
+    html += '<div class="dash-sec-h" style="margin-top:14px"><span>المرحلة '+ph+': '+esc(PHASE_NAMES[ph])+'</span><span class="dsh-line"></span><span style="font-size:12px;color:var(--accent)">'+phProg+'%</span></div>';
+    if(mainAct) html += '<div class="note" style="margin:0 0 8px">المسئول: '+esc(mainAct.resp)+(mainAct.note?(' · '+esc(mainAct.note)):'')+'</div>';
+    phActs.forEach(function(a){
+      var st = activityStatus(a); var sc = GSTATUS[st];
+      var rec = ganttRec(a.id);
+      var dl = activityDeadline(a);
+      html += '<div class="gantt-item" style="border:1px solid var(--line);border-right:4px solid '+sc.col+';border-radius:10px;padding:10px;margin-bottom:8px;background:var(--tile-bg)">';
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">';
+      html += '<span style="font-weight:700;font-size:13px;color:var(--ink)">'+esc(a.name)+'</span>';
+      html += '<span class="eff-badge" style="background:'+sc.bg+';color:'+sc.col+'">'+sc.ico+' '+sc.lbl+'</span>';
+      html += '</div>';
+      if(ganttStart) html += '<div class="note" style="margin:4px 0">الموعد النهائى: '+fmtDate(dl)+'</div>';
+      // شريط تقدّم
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">';
+      html += '<input type="range" min="0" max="100" step="10" value="'+rec.progress+'" oninput="ganttSetProgress(\''+a.id+'\',this.value)" style="flex:1;accent-color:'+sc.col+'">';
+      html += '<span id="gp-'+a.id+'" style="font-weight:800;font-size:12px;color:'+sc.col+';min-width:38px;text-align:left">'+rec.progress+'%</span>';
+      html += '</div>';
+      if(st==='delayed') html += '<button class="btn btn-sm" style="margin-top:6px;background:#25D366;color:#fff" onclick="ganttWhatsApp(\''+a.id+'\')">📲 إبلاغ المسئول عبر واتساب</button>';
+      html += '</div>';
+    });
+  });
+  box.innerHTML = html;
+}
+function ganttSetProgress(id, val){
+  var rec = ganttRec(id);
+  rec.progress = parseInt(val);
+  if(rec.progress>0 && !rec.startedReal) rec.startedReal = new Date().toISOString();
+  if(rec.progress>=100) rec.doneReal = new Date().toISOString();
+  saveGantt();
+  var lbl = document.getElementById('gp-'+id);
+  if(lbl) lbl.textContent = rec.progress+'%';
+  // إعادة الرسم بعد تأخير بسيط لتحديث الحالات والتنبيهات
+  clearTimeout(window._ganttT);
+  window._ganttT = setTimeout(renderGantt, 600);
+}
+function ganttWhatsApp(id){
+  var a = GANTT_SEED.filter(function(x){return x.id===id;})[0];
+  if(!a) return;
+  var dl = activityDeadline(a);
+  var rec = ganttRec(a.id);
+  var msg = 'تنبيه تأخّر نشاط — مشروع حصر ومعالجة الترع المتعبة\n\n';
+  msg += 'النشاط: '+a.name+'\n';
+  msg += 'المرحلة: '+PHASE_NAMES[a.phase]+'\n';
+  msg += 'المسئول: '+a.resp+'\n';
+  msg += 'الموعد النهائى المخطط: '+fmtDate(dl)+'\n';
+  msg += 'نسبة الإنجاز الحالية: '+rec.progress+'%\n\n';
+  msg += 'برجاء الإفادة بأسباب التأخير وموعد الإنجاز المتوقع.';
+  var WA_PHONE = '201007861177';   // رقم سناء بالصيغة الدولية (كود مصر 20 + الرقم بدون صفر)
+  var url = 'https://wa.me/' + WA_PHONE + '?text=' + encodeURIComponent(msg);
+  try{ window.open(url, '_blank'); }catch(e){ location.href = url; }
 }
 function renderFormsInfo(){
   var h = FORMS_INFO.map(function(f){
@@ -4387,6 +4606,7 @@ document.getElementById('ver').textContent = APP_VER;
 engineSelfTest();
 loadTheme();
 loadDB();
+loadGantt();
 loadCloudCfg();
 refreshAll();
 showView('dash');
@@ -4419,7 +4639,7 @@ if(pendingSeedMigration){
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-1';
+  var SW_VER = 'tired-canals-v8-3';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
