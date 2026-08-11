@@ -642,7 +642,7 @@ function seasonLabel(s){ return {summer:'صيفى',winter:'شتوى',nili:'ني�
 
 /* ===== 8-form field schema ===== */
 var SEED_DATA = [];
-var SEED_VER = 3;
+var SEED_VER = 4;
 
 var SEV_LABEL = {ok:'جيدة', warn:'متوسطة', bad:'سيئة', crit:'حرجة'};
 var SEV_ORDER = {crit:4, bad:3, warn:2, ok:1};
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.4';
+var APP_VER = 'v8.5';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -4684,7 +4684,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-4';
+  var SW_VER = 'tired-canals-v8-5';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
