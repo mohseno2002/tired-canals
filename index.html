@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v9.4</span>
+  <span class="badge" id="ver">v9.5</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -403,7 +403,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
     <div class="card"><div class="card-b">
       <div id="cloud-status" class="note" style="margin-top:0;margin-bottom:10px"></div>
       <label class="fl">خلفية التخزين</label>
-      <select id="cloud-backend" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px">
+      <select id="cloud-backend" onchange="setBackend(this.value)" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px">
         <option value="sheets">جوجل شيت فقط (الوضع الحالى)</option>
         <option value="dual">الاثنان معاً — كتابة مزدوجة (الشيت مصدر الحقيقة)</option>
         <option value="rtdb">فايربيز فقط</option>
@@ -429,6 +429,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div style="height:8px"></div>
       <button class="btn btn-out" onclick="cloudParity()">🧪 تقرير المطابقة (شيت مقابل فايربيز)</button>
       <div id="parity-out"></div>
+      <div style="height:8px"></div>
+      <button class="btn btn-out" onclick="rtdbSnapList()">🗂 اللقطات اليومية (عرض واستعادة)</button>
+      <div id="snap-out"></div>
       <div class="note">المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والسحابة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. الدمج <b>حقلاً حقلاً</b> (القيمة غير الفارغة الأحدث تفوز، ولا يُمحى حقل بقيمة فارغة)، والسجل السحابى الذى لا مقابل له محلياً <b>لا يُضاف تلقائياً</b> بل يُعرض لمراجعتك، والحذف المحلى يُرفع كشاهدة فلا يعود. وأى صفّ <b>أقدم من البيان الرسمى المثبَّت</b> يُرفض ويُطلب حذفه من الشيت — فلا يعيد جهازٌ متأخر بياناً قديماً.</div>
     </div></div>
 
@@ -669,7 +672,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v9.4';
+var APP_VER = 'v9.5';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -1316,6 +1319,63 @@ function rtdbSnapshot(){
       return step(0);
     });
   }).catch(function(e){ rtdbSnapErr = 'تعذّرت اللقطة اليومية: ' + (e.message || e); });
+}
+
+
+/* ---- تثبيت اختيار الخلفية فور تغييره (لا ينتظر زرّ الحفظ) ---- */
+function setBackend(v){
+  cloudCfg.backend = (v === 'rtdb' || v === 'dual') ? v : 'sheets';
+  saveCloudCfg();
+  try{ renderCloudStatus(); }catch(e){}
+  toast('الخلفية الآن: ' + backendLabel() + ' — محفوظة');
+}
+
+/* ---- اللقطات اليومية: عرض واستعادة (ضمانة القواعد المفتوحة) ---- */
+function snapNote(h, col){
+  return '<div class=\u0022note\u0022' + (col ? (' style=\u0022color:' + col + '\u0022') : '') + '>' + h + '</div>';
+}
+function rtdbSnapList(){
+  var box = document.getElementById('snap-out'); if(!box) return;
+  if(!usesRtdb()){ box.innerHTML = snapNote('اللقطات تُكتب فى وضع فايربيز — غيّر خلفية التخزين أولاً.', '#a8531a'); return; }
+  box.innerHTML = snapNote('جارٍ قراءة اللقطات...');
+  rtdbReq('data/backups','GET',null,'shallow=true').then(function(keys){
+    var ks = keys ? Object.keys(keys) : [];
+    if(!ks.length){ box.innerHTML = snapNote('لا لقطات بعد — تُكتب لقطة واحدة يومياً عند أول مزامنة، ويُحتفظ بآخر ٧.'); return; }
+    ks.sort(); ks.reverse();
+    var h = snapNote('<b>' + ks.length + ' لقطة محفوظة</b> — الاستعادة تحلّ محلّ قائمتك الحالية بعد تأكيد، ولا تُرفع تلقائياً.');
+    ks.forEach(function(d){
+      h += '<button class=\u0022btn btn-out btn-sm\u0022 style=\u0022margin:4px 4px 0 0\u0022 onclick=\u0022rtdbSnapRestore(\u0027' + d + '\u0027)\u0022>↩ ' + esc(d) + '</button>';
+    });
+    box.innerHTML = h;
+  }).catch(function(e){
+    box.innerHTML = snapNote('تعذّرت قراءة اللقطات: ' + esc(String(e.message || e)), '#a8531a');
+  });
+}
+function rtdbSnapRestore(day){
+  var box = document.getElementById('snap-out');
+  rtdbReq('data/backups/' + day,'GET').then(function(obj){
+    var arr = [];
+    if(obj && typeof obj === 'object'){
+      Object.keys(obj).forEach(function(k){
+        var r = obj[k];
+        if(!r || typeof r !== 'object') return;
+        if(r._srv !== undefined) delete r._srv;
+        if(!r.id) r.id = k;
+        arr.push(r);
+      });
+    }
+    if(!arr.length) throw new Error('اللقطة فارغة — لم يُستبدل شىء');
+    var now = (DB.canals || []).length;
+    if(!confirm('استعادة لقطة ' + day + '\n\n' + arr.length + ' سجلاً ستحلّ محلّ قائمتك الحالية (' + now + ' سجلاً).\n\nلا تُرفع للسحابة تلقائياً — راجعها ثم اضغط مزامنة.\n\nمتابعة؟')) return;
+    DB.canals = arr;
+    stripDerived(); saveDB(); refreshAll();
+    if(box) box.innerHTML = snapNote('<b>استُعيدت لقطة ' + esc(day) + '</b> — ' + arr.length + ' سجلاً. راجع القائمة، ثم اضغط «مزامنة الآن» لنشرها.', '#1f7a4d');
+    toast('استُعيدت لقطة ' + day + ' — ' + arr.length + ' سجلاً');
+  }).catch(function(e){
+    var m = 'تعذّرت الاستعادة: ' + (e.message || e);
+    if(box) box.innerHTML = snapNote(esc(m), '#a8531a');
+    toast(m);
+  });
 }
 
 /* ---- تقرير المطابقة: الشيت مقابل فايربيز (بوابة الانتقال) ---- */
@@ -5398,7 +5458,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v9-4';
+  var SW_VER = 'tired-canals-v9-5';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
