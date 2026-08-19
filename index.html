@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v9.1</span>
+  <span class="badge" id="ver">v9.2</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -364,7 +364,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 <div class="view" id="v-list">
   <div class="wrap">
     <div class="search-bar">
-      <input id="search" placeholder="بحث باسم الترعة / الإدارة / الهندسة...">
+      <input id="search" placeholder="بحث باسم الترعة / الإدارة / الهندسة..." autocomplete="off" autocorrect="off" spellcheck="false" name="tc-canal-q">
     </div>
     <div class="pill-row" id="filter-pills">
       <span class="pill on" data-f="all">الكل</span>
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v9.1';
+var APP_VER = 'v9.2';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -3730,9 +3730,13 @@ function renderList(){
   var q = (document.getElementById('search').value||'').trim();
   var items = DB.canals.slice();
   if(listFilter!=='all') items = items.filter(function(c){return c._sev===listFilter;});
-  if(q) items = items.filter(function(c){
-    return [c.f8_name,c.f8_admin,c.f8_eng,c.f8_feeder].join(' ').indexOf(q)>=0;
-  });
+  if(q){
+    var nq = normCanalName(q);
+    items = items.filter(function(c){
+      var hay = normCanalName([(c.f8_name||''),(c.f8_admin||''),(c.f8_eng||''),(c.f8_feeder||'')].join(' '));
+      return hay.indexOf(nq)>=0;
+    });
+  }
   items.sort(function(a,b){return SEV_ORDER[b._sev]-SEV_ORDER[a._sev];});
   var html = items.map(function(c){
     return '<div class="canal-item" onclick="openDetail(\''+c.id+'\')">'+
@@ -3741,7 +3745,16 @@ function renderList(){
       '<div class="meta">'+esc(c.f8_admin||'بدون إدارة')+(c.f8_eng?(' · '+esc(c.f8_eng)):'')+
       ' · زمام '+(parseZam(c.f8_zam)?fmt(parseZam(c.f8_zam)):'-')+' ف · '+(c._diag.length)+' مشكلة</div></div>';
   }).join('');
-  document.getElementById('canal-list').innerHTML = items.length? html : emptyMsg(DB.canals.length?'لا نتائج للبحث':'اضغط + لإضافة أول ترعة');
+  var emptyTxt;
+  if(!DB.canals.length){ emptyTxt = 'اضغط + لإضافة أول ترعة'; }
+  else {
+    var why = [];
+    if(q) why.push('البحث: \u0022' + esc(q) + '\u0022');
+    if(listFilter!=='all') why.push('الفلتر: ' + (SEV_LABEL[listFilter]||listFilter));
+    emptyTxt = 'لا نتائج مطابقة' + (why.length? (' — ' + why.join(' · ')) : '') +
+      '<br><button class=\u0022btn\u0022 style=\u0022margin-top:8px\u0022 onclick=\u0022clearListFilters()\u0022>مسح البحث والفلاتر</button>';
+  }
+  document.getElementById('canal-list').innerHTML = items.length? html : emptyMsg(emptyTxt);
 }
 
 /* ============================================================
@@ -4982,7 +4995,28 @@ function dl(blob, name){
 function dateStr(){ var d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 
 /* ===== Filters + search ===== */
-document.getElementById('search').addEventListener('input', renderList);
+var searchTyped = false;
+function clearListFilters(){
+  var se = document.getElementById('search');
+  se.value = ''; searchTyped = true;
+  listFilter = 'all';
+  document.querySelectorAll('#filter-pills .pill').forEach(function(x){ x.classList.remove('on'); });
+  var allP = document.querySelector('#filter-pills .pill[data-f=\u0022all\u0022]');
+  if(allP) allP.classList.add('on');
+  renderList();
+}
+(function(){
+  var se = document.getElementById('search');
+  function mark(){ searchTyped = true; }
+  se.addEventListener('keydown', mark);
+  se.addEventListener('paste', mark);
+  se.addEventListener('compositionstart', mark);
+  se.addEventListener('input', renderList);
+  /* حارس الملء التلقائى: قيمة لم يكتبها المستخدم تُمسح (فخّ كروم الموثَّق) */
+  function clearAutofill(){ if(!searchTyped && se.value){ se.value = ''; renderList(); } }
+  setTimeout(clearAutofill, 900);
+  setTimeout(clearAutofill, 3000);
+})();
 document.querySelectorAll('#filter-pills .pill').forEach(function(p){
   p.addEventListener('click', function(){
     document.querySelectorAll('#filter-pills .pill').forEach(function(x){x.classList.remove('on');});
@@ -5096,7 +5130,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v9-1';
+  var SW_VER = 'tired-canals-v9-2';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
