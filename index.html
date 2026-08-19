@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v8.9</span>
+  <span class="badge" id="ver">v9.1</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -419,7 +419,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <button class="btn btn-sand" onclick="cloudSyncNow(false)">🔄 مزامنة الآن (رفع + جلب)</button>
       <div style="height:8px"></div>
       <button class="btn btn-out" onclick="cloudPullOnly()">⬇ جلب من السحابة فقط</button>
-      <div class="note">المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والسحابة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. آخر تعديل يفوز عند التعارض.</div>
+      <div class="note">المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والسحابة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. الدمج <b>حقلاً حقلاً</b> (القيمة غير الفارغة الأحدث تفوز، ولا يُمحى حقل بقيمة فارغة)، والسجل السحابى الذى لا مقابل له محلياً <b>لا يُضاف تلقائياً</b> بل يُعرض لمراجعتك، والحذف المحلى يُرفع كشاهدة فلا يعود. وأى صفّ <b>أقدم من البيان الرسمى المثبَّت</b> يُرفض ويُطلب حذفه من الشيت — فلا يعيد جهازٌ متأخر بياناً قديماً.</div>
     </div></div>
 
     <div class="sec-title">التقارير والتصدير</div>
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.9';
+var APP_VER = 'v9.1';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -771,10 +771,61 @@ var mwriStore = (function(){
    حصة النطاق المشتركة. أى فشل فى التحقق يعنى: لا يُمسح شىء. */
 var storageMigrated = '';
 var lastSavedChars = 0;
+/* ============================================================
+   حارس الأساس المثبَّت
+   البيان الرسمى (canals-data.json) هو الأساس، وطابعه الزمنى BASELINE_TS.
+   أى سجل — محلى أو سحابى — ليس من الأساس وطابعه أقدم منه فهو بقايا بيان
+   سابق: يُرفع عن العرض ويُطلب حذفه من الشيت. الدرس المدفوع ثمنه فى لوحة
+   حياة كريمة: تفريغ الشيت وحده لا يكفى، لأن جهازاً لم يُحدَّث يسحب فيمتلئ
+   ثم يُعيد الدفع — فالحكم يكون على **الصفّ نفسه** لا على ترتيب الأجهزة.
+   ولا شىء يُمحى نهائياً: المرفوع يُحفظ فى حجر صحى قابل للاسترجاع.
+   ============================================================ */
+var BASELINE_TS = 1787000000000;
+function seedIdSet(){
+  var m = {};
+  (SEED_DATA||[]).forEach(function(c){ if(c && c.id) m[c.id] = 1; });
+  return m;
+}
+function isPreBaseline(c, seedIds){
+  if(!c || !c.id) return false;
+  if(seedIds[c.id]) return false;                 /* من البيان الرسمى */
+  return (Number(c.updated)||0) < BASELINE_TS;    /* أقدم من لحظة التثبيت */
+}
+function applyBaselineGuard(){
+  var seedIds = seedIdSet();
+  if(!DB.quarantine) DB.quarantine = [];
+  var keep = [], moved = 0;
+  (DB.canals||[]).forEach(function(c){
+    if(isPreBaseline(c, seedIds)){ DB.quarantine.push(cleanRec(c)); moved++; }
+    else keep.push(c);
+  });
+  if(moved){ DB.canals = keep; saveDB(); }
+  return moved;
+}
+var baselineNote = '';
+function restoreQuarantine(){
+  if(!DB.quarantine || !DB.quarantine.length){ toast('لا سجلات فى الحجر'); return; }
+  if(!confirm('استرجاع ' + DB.quarantine.length + ' سجلاً سابقاً للبيان الرسمى إلى القائمة؟')) return;
+  var n = DB.quarantine.length;
+  DB.quarantine.forEach(function(c){ c.updated = Date.now(); DB.canals.push(c); });
+  DB.quarantine = [];
+  baselineNote = '';
+  saveDB(); refreshAll(); renderCloudStatus(); toast('أُرجع ' + n + ' سجلاً');
+}
+function purgeQuarantine(){
+  if(!DB.quarantine || !DB.quarantine.length){ toast('لا سجلات فى الحجر'); return; }
+  if(!confirm('حذف ' + DB.quarantine.length + ' سجلاً من الحجر نهائياً؟ لا رجعة.')) return;
+  DB.quarantine = []; baselineNote = '';
+  saveDB(); renderCloudStatus(); toast('تم التفريغ');
+}
+
 var DERIVED_RE = /"_diag"|"_hyd"|"_cost"|"_pri"|"_sev"|"_hri"/;
 function afterLoad(raw){
   /* حجم ما هو مخزَّن فعلاً — تعرضه لوحة المساحة قبل أى حفظ */
   lastSavedChars = raw ? raw.length : 0;
+  /* بقايا بيان سابق للأساس تُرفع إلى الحجر الصحى */
+  var moved = applyBaselineGuard();
+  if(moved) baselineNote = 'رُفع ' + moved + ' سجلاً سابقاً للبيان الرسمى إلى الحجر الصحى (قابل للاسترجاع).';
   /* نسخة محفوظة ببيلد قديم تحمل نتائج حسابية: تُعاد كتابتها نظيفة فوراً */
   if(raw && DERIVED_RE.test(raw)) saveDB();
 }
@@ -1045,65 +1096,206 @@ function saveCloudCfg(){
 }
 function cloudConfigured(){ return !!(cloudCfg.url && cloudCfg.key); }
 
+/* ============================================================
+   المزامنة السحابية (جوجل شيت عبر Apps Script)
+   مبادئ حاكمة بعد مراجعة ١٩/٨/٢٠٢٦:
+   • الدمج على مستوى الحقل لا استبدال السجل — فلا تُمحى بيانات
+     الوزارة الرسمية بسجل سحابى أقدم محتوىً وأحدث طابعاً.
+   • السجل السحابى الذى لا مقابل له محلياً لا يُضاف صامتاً —
+     يُعرض للمراجعة (قد يكون بقايا بيان قديم).
+   • الحذف شاهدة صريحة تُرفع، لا حذف من المصفوفة وحده.
+   • الحمولة تُنظَّف من الحقول المشتقّة قبل الرفع.
+   • كل طلب بمهلة، وكل خطأ يُعرض نصّاً بسببه الحقيقى.
+   ============================================================ */
+var CLOUD_TIMEOUT_MS = 25000;
+var lastCloudError = '';
+var pendingRemote = null;   /* سجلات سحابية بانتظار موافقة المستخدم */
+
+/* السجل كما يُرفع: بلا الحقول المشتقّة */
+function cleanRec(c){
+  var o = {};
+  Object.keys(c).forEach(function(k){ if(k.charAt(0) !== '_') o[k] = c[k]; });
+  return o;
+}
+function fetchJSON(url, opts){
+  opts = opts || {};
+  var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  if(ctl) opts.signal = ctl.signal;
+  var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, CLOUD_TIMEOUT_MS);
+  return fetch(url, opts).then(function(r){
+    return r.text().then(function(txt){
+      clearTimeout(timer);
+      if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + txt.slice(0,140));
+      try{ return JSON.parse(txt); }
+      catch(e){
+        /* Apps Script يردّ صفحة HTML عند خطأ أو عند طلب تسجيل دخول */
+        var hint = (txt.indexOf('<') === 0)
+          ? 'الخادم ردّ صفحة HTML لا JSON — الأغلب أن نشر الـWeb App ليس "Anyone" أو الرابط ليس /exec.'
+          : 'الردّ ليس JSON سليماً.';
+        throw new Error(hint + ' — ' + txt.slice(0,120));
+      }
+    });
+  }).catch(function(e){
+    clearTimeout(timer);
+    if(e && e.name === 'AbortError') throw new Error('انتهت المهلة (' + Math.round(CLOUD_TIMEOUT_MS/1000) + ' ث) — الشبكة بطيئة أو الخادم لا يردّ.');
+    throw e;
+  });
+}
+
 /* رفع ترع للسحابة (upsert). canals = مصفوفة سجلات. */
 function cloudPush(canals, action){
-  if(!cloudConfigured()) return Promise.resolve({ok:false, error:'لم تُضبط السحابة'});
+  if(!cloudConfigured()) return Promise.reject(new Error('لم تُضبط السحابة'));
   action = action || 'upsert';
-  return fetch(cloudCfg.url, {
+  var payload = {
+    key: cloudCfg.key, action: action, user: cloudCfg.user||'',
+    canals: (canals||[]).map(cleanRec),
+    tombstones: (action === 'upsert') ? getTombstones() : []
+  };
+  return fetchJSON(cloudCfg.url, {
     method:'POST',
     headers:{'Content-Type':'text/plain;charset=utf-8'}, // text/plain يتجنّب preflight CORS
-    body: JSON.stringify({ key:cloudCfg.key, action:action, user:cloudCfg.user||'', canals:canals })
-  }).then(function(r){ return r.json(); });
+    body: JSON.stringify(payload)
+  }).then(function(res){
+    if(res && res.ok === false) throw new Error((res.error||'رفض الخادم الرفع') + '');
+    return res;
+  });
 }
 
 /* جلب الترع من السحابة. لو admin مضبوط، يجلب إدارته فقط. */
 function cloudPull(){
-  if(!cloudConfigured()) return Promise.resolve({ok:false, error:'لم تُضبط السحابة'});
+  if(!cloudConfigured()) return Promise.reject(new Error('لم تُضبط السحابة'));
   var u = cloudCfg.url + '?key=' + encodeURIComponent(cloudCfg.key);
   if(cloudCfg.admin) u += '&admin=' + encodeURIComponent(cloudCfg.admin);
-  return fetch(u).then(function(r){ return r.json(); });
+  return fetchJSON(u);
 }
 
-/* دمج سحابى: السجلات السحابية تحدّث/تضيف للمحلى حسب الـid وآخر تعديل. */
-function cloudMerge(remote){
-  var byId = {};
-  DB.canals.forEach(function(c, i){ byId[c.id] = i; });
-  var added=0, updated=0;
-  remote.forEach(function(rc){
-    if(!rc.id) return;
-    if(byId[rc.id]!=null){
-      var local = DB.canals[byId[rc.id]];
-      // آخر تعديل يفوز
-      if((rc.updated||0) >= (local.updated||0)){ DB.canals[byId[rc.id]] = rc; updated++; }
+/* ---- شواهد الحذف: الحذف المحلى يُرفع بدل أن يعيده أول جلب ---- */
+function getTombstones(){
+  if(!DB.tombstones) DB.tombstones = {};
+  return Object.keys(DB.tombstones).map(function(id){ return {id:id, deleted:DB.tombstones[id]}; });
+}
+function addTombstone(id){
+  if(!DB.tombstones) DB.tombstones = {};
+  DB.tombstones[id] = Date.now();
+}
+
+/* ---- الدمج ----
+   حقلاً حقلاً: القيمة السحابية تُكتب فقط إن كانت غير فارغة
+   والسجل السحابى أحدث. فلا يمحو سجل سحابى قديم حقلاً رسمياً جديداً،
+   ولا يضيع ما أدخله مهندس آخر. */
+function mergeRec(local, remote){
+  var out = {}, k;
+  for(k in local){ if(k.charAt(0) !== '_') out[k] = local[k]; }
+  var remoteNewer = (Number(remote.updated)||0) > (Number(local.updated)||0);
+  for(k in remote){
+    if(k.charAt(0) === '_') continue;
+    var rv = remote[k];
+    if(rv === undefined || rv === null || rv === '') continue;
+    if(out[k] === undefined || out[k] === null || out[k] === '' || remoteNewer) out[k] = rv;
+  }
+  out.updated = Math.max(Number(local.updated)||0, Number(remote.updated)||0);
+  return out;
+}
+/* يحسب أثر الدمج بلا تنفيذه — لعرضه على المستخدم قبل الموافقة */
+function planMerge(remote){
+  var byId = {}; DB.canals.forEach(function(c,i){ byId[c.id] = i; });
+  var tomb = DB.tombstones || {};
+  var seedIds = seedIdSet();
+  var plan = {update:[], add:[], skipDeleted:0, skipStale:0, wipe:[], unchanged:0};
+  (remote||[]).forEach(function(rc){
+    if(!rc || !rc.id) return;
+    if(tomb[rc.id] && (Number(rc.updated)||0) <= tomb[rc.id]){ plan.skipDeleted++; return; }
+    /* بقايا بيان سابق للأساس: لا تدخل، ويُطلب حذف صفّها من الشيت */
+    if(isPreBaseline(rc, seedIds)){ plan.skipStale++; plan.wipe.push(rc.id); return; }
+    if(byId[rc.id] != null){
+      var merged = mergeRec(DB.canals[byId[rc.id]], rc);
+      if(JSON.stringify(merged) !== JSON.stringify(cleanRec(DB.canals[byId[rc.id]]))) plan.update.push({i:byId[rc.id], rec:merged});
+      else plan.unchanged++;
     } else {
-      DB.canals.push(rc); added++;
+      plan.add.push(rc);
     }
   });
-  if(added||updated){ saveDB(); refreshAll(); }
-  return {added:added, updated:updated};
+  return plan;
+}
+function applyMerge(plan, withAdds){
+  plan.update.forEach(function(u){
+    var keep = DB.canals[u.i];
+    Object.keys(keep).forEach(function(k){ if(k.charAt(0)==='_') u.rec[k] = keep[k]; });
+    DB.canals[u.i] = u.rec;
+  });
+  var added = 0;
+  if(withAdds){ plan.add.forEach(function(rc){ DB.canals.push(rc); added++; }); }
+  if(plan.update.length || added){ stripDerived(); saveDB(); refreshAll(); }
+  return {updated:plan.update.length, added:added};
+}
+/* السجلات الجديدة لا تدخل صامتة: تُعرض ويُقرِّر المستخدم */
+function cloudMerge(remote, silent){
+  var plan = planMerge(remote);
+  var r = applyMerge(plan, false);
+  /* شواهد حذف للصفوف السابقة للأساس — تُرفع فى المزامنة التالية فيُنظَّف الشيت */
+  plan.wipe.forEach(function(id){ addTombstone(id); });
+  if(plan.wipe.length) saveDB();
+  var msg = 'تم التحديث: ' + r.updated + ' سجلاً' + (plan.skipDeleted? ' · تُجوهل ' + plan.skipDeleted + ' محذوفاً محلياً':'')
+          + (plan.skipStale? ' · رُفض ' + plan.skipStale + ' صفّاً سابقاً للبيان الرسمى (سيُحذف من الشيت)':'');
+  if(plan.add.length){
+    pendingRemote = plan.add;
+    msg += ' · ' + plan.add.length + ' سجلاً سحابياً غير موجود محلياً بانتظار مراجعتك (تبويب التقارير)';
+    try{ renderCloudStatus(); }catch(e){}
+  }
+  if(!silent) toast(msg);
+  return {added:0, updated:r.updated, pending:plan.add.length};
+}
+function acceptPendingRemote(){
+  if(!pendingRemote || !pendingRemote.length){ toast('لا سجلات معلّقة'); return; }
+  if(!confirm('إضافة ' + pendingRemote.length + ' سجلاً من السحابة إلى قاعدتك المحلية؟\n\nراجعها جيداً: السجلات التى لا مقابل لها محلياً قد تكون بقايا بيان قديم.')) return;
+  var n = pendingRemote.length;
+  pendingRemote.forEach(function(rc){ DB.canals.push(rc); });
+  pendingRemote = null;
+  stripDerived(); saveDB(); refreshAll(); renderCloudStatus();
+  toast('أُضيف ' + n + ' سجلاً');
+}
+function rejectPendingRemote(){
+  if(!pendingRemote){ toast('لا سجلات معلّقة'); return; }
+  pendingRemote = null; renderCloudStatus(); toast('تم تجاهل السجلات المعلّقة');
 }
 
 /* مزامنة كاملة: ارفع المحلى ثم اجلب السحابى وادمج. */
 function cloudSyncNow(silent){
   if(!cloudConfigured()){ if(!silent) toast('اضبط رابط السحابة أولاً من الإعدادات'); return; }
   if(!silent) toast('جارٍ المزامنة...');
-  // ارفع كل الترع المحلية (أو إدارة المستخدم فقط لو مضبوطة)
   var toSend = DB.canals;
   if(cloudCfg.admin) toSend = DB.canals.filter(function(c){ return (c.f8_admin||'')===cloudCfg.admin; });
-  cloudPush(toSend, 'upsert').then(function(res){
+  cloudPush(toSend, 'upsert').then(function(){
+    if(DB.tombstones) DB.tombstones = {};   /* رُفعت الشواهد بنجاح */
     return cloudPull();
   }).then(function(res){
     if(res && res.ok && res.canals){
-      var m = cloudMerge(res.canals);
-      if(!silent) toast('تمت المزامنة: +'+m.added+' جديد، '+m.updated+' محدّث');
+      lastCloudError = '';
+      cloudMerge(res.canals, silent);
     } else {
-      if(!silent) toast('تعذّرت المزامنة: ' + ((res&&res.error)||'تحقق من الرابط'));
+      throw new Error((res && res.error) || 'الردّ بلا بيانات — تحقق من المفتاح والرابط');
     }
+    try{ renderCloudStatus(); }catch(e){}
   }).catch(function(err){
-    if(!silent) toast('خطأ شبكة: ' + err.message);
+    lastCloudError = 'تعذّرت المزامنة: ' + (err.message || err);
+    if(!silent) toast(lastCloudError);
+    try{ renderCloudStatus(); }catch(e){}
   });
 }
 
+function cloudPullOnly(){
+  if(!cloudConfigured()){ toast('اضبط رابط السحابة أولاً'); return; }
+  toast('جارٍ الجلب...');
+  cloudPull().then(function(res){
+    if(res && res.ok && res.canals){ lastCloudError=''; cloudMerge(res.canals, false); }
+    else throw new Error((res && res.error) || 'الردّ بلا بيانات');
+    try{ renderCloudStatus(); }catch(e){}
+  }).catch(function(err){
+    lastCloudError = 'تعذّر الجلب: ' + (err.message || err);
+    toast(lastCloudError);
+    try{ renderCloudStatus(); }catch(e){}
+  });
+}
 function saveCloudSettings(){
   cloudCfg.url = (document.getElementById('cloud-url')||{}).value.trim();
   cloudCfg.key = (document.getElementById('cloud-keyfield')||{}).value.trim();
@@ -1114,23 +1306,29 @@ function saveCloudSettings(){
   renderCloudStatus();
   toast('تم حفظ إعدادات السحابة');
 }
-function cloudPullOnly(){
-  if(!cloudConfigured()){ toast('اضبط رابط السحابة أولاً'); return; }
-  toast('جارٍ الجلب...');
-  cloudPull().then(function(res){
-    if(res && res.ok && res.canals){
-      var m = cloudMerge(res.canals);
-      toast('تم الجلب: +'+m.added+' جديد، '+m.updated+' محدّث');
-    } else { toast('تعذّر الجلب: '+((res&&res.error)||'تحقق من الرابط')); }
-  }).catch(function(err){ toast('خطأ شبكة: '+err.message); });
-}
 function renderCloudStatus(){
   var el = document.getElementById('cloud-status'); if(!el) return;
+  var extra = '';
+  var qn = DB.quarantine ? DB.quarantine.length : 0;
+  if(baselineNote) extra += '<div class="note" style="color:#1f7a4d"><b>✓ ' + esc(baselineNote) + '</b></div>';
+  if(qn){
+    extra += '<div class="note">الحجر الصحى: <b>' + qn + '</b> سجلاً سابقاً للبيان الرسمى، خارج القائمة والحسابات.</div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-out btn-sm" onclick="restoreQuarantine()">استرجاعها</button>' +
+      '<button class="btn btn-out btn-sm" onclick="purgeQuarantine()">حذفها نهائياً</button></div>';
+  }
+  var tn = DB.tombstones ? Object.keys(DB.tombstones).length : 0;
+  if(tn) extra += '<div class="note" style="color:#a8531a">' + tn + ' حذفاً محلياً بانتظار الرفع للسحابة.</div>';
+  if(pendingRemote && pendingRemote.length){
+    extra += '<div class="note" style="color:#a8531a"><b>' + pendingRemote.length + ' سجلاً سحابياً غير موجود فى قاعدتك.</b> قد تكون بقايا بيان قديم — راجع قبل الإضافة.</div>' +
+      '<div style="display:flex;gap:8px;margin-top:6px"><button class="btn btn-sand btn-sm" onclick="acceptPendingRemote()">إضافتها</button>' +
+      '<button class="btn btn-out btn-sm" onclick="rejectPendingRemote()">تجاهلها</button></div>';
+  }
+  if(lastCloudError) extra += '<div class="note" style="color:#a8531a"><b>' + esc(lastCloudError) + '</b></div>';
   if(cloudConfigured()){
-    el.innerHTML = '✓ السحابة مضبوطة' + (cloudCfg.admin? (' — محافظة: <b>'+esc(cloudCfg.admin)+'</b>') : ' — يعرض كل الإدارات') + (cloudCfg.auto?' · رفع تلقائى مفعّل':'');
+    el.innerHTML = '✓ السحابة مضبوطة' + (cloudCfg.admin? (' — محافظة: <b>'+esc(cloudCfg.admin)+'</b>') : ' — يعرض كل الإدارات') + (cloudCfg.auto?' · رفع تلقائى مفعّل':'') + extra;
     el.style.color = 'var(--ok)';
   } else {
-    el.innerHTML = '⚠ لم تُضبط المزامنة السحابية بعد. أدخل رابط الـWeb App والمفتاح ثم احفظ.';
+    el.innerHTML = '⚠ لم تُضبط المزامنة السحابية بعد. أدخل رابط الـWeb App والمفتاح ثم احفظ.' + extra;
     el.style.color = 'var(--warn)';
   }
 }
@@ -3072,9 +3270,12 @@ function submitForm(){
   // رفع تلقائى للسحابة لو مفعّل
   if(cloudConfigured() && cloudCfg.auto){
     cloudPush([rec], 'upsert').then(function(res){
-      if(res && res.ok) toast('تم الحفظ والرفع للسحابة');
-      else toast('حُفظ محلياً (تعذّر الرفع السحابى)');
-    }).catch(function(){ toast('حُفظ محلياً (لا اتصال بالسحابة)'); });
+      if(res && res.ok){ lastCloudError=''; toast('تم الحفظ والرفع للسحابة'); }
+      else { lastCloudError = 'تعذّر الرفع: ' + ((res&&res.error)||'ردّ غير متوقع'); toast(lastCloudError); }
+    }).catch(function(e){
+      lastCloudError = 'حُفظ محلياً — تعذّر الرفع: ' + (e.message||e);
+      toast(lastCloudError);
+    });
   }
   closeForm();
   refreshAll();
@@ -3083,6 +3284,7 @@ function submitForm(){
 function deleteCanal(id){
   if(!confirm('تأكيد حذف هذه الترعة نهائياً؟')) return;
   DB.canals = DB.canals.filter(function(x){return x.id!==id;});
+  addTombstone(id);   /* شاهدة حذف تُرفع للسحابة، وإلا أعادها أول جلب */
   saveDB(); closeForm(); nav('list'); refreshAll(); toast('تم الحذف');
 }
 
@@ -4894,7 +5096,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-9';
+  var SW_VER = 'tired-canals-v9-1';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
