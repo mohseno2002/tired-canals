@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v8.8</span>
+  <span class="badge" id="ver">v8.9</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.8';
+var APP_VER = 'v8.9';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -770,14 +770,22 @@ var mwriStore = (function(){
    يقرأه للتحقّق من المطابقة حرفاً بحرف، ثم يمسح القديم — فتتحرر
    حصة النطاق المشتركة. أى فشل فى التحقق يعنى: لا يُمسح شىء. */
 var storageMigrated = '';
+var lastSavedChars = 0;
+var DERIVED_RE = /"_diag"|"_hyd"|"_cost"|"_pri"|"_sev"|"_hri"/;
+function afterLoad(raw){
+  /* حجم ما هو مخزَّن فعلاً — تعرضه لوحة المساحة قبل أى حفظ */
+  lastSavedChars = raw ? raw.length : 0;
+  /* نسخة محفوظة ببيلد قديم تحمل نتائج حسابية: تُعاد كتابتها نظيفة فوراً */
+  if(raw && DERIVED_RE.test(raw)) saveDB();
+}
 function loadDBAsync(){
   return mwriStore.init().then(function(){
     return mwriStore.get(STORE_KEY);
   }).then(function(raw){
-    if(raw != null && raw !== ''){ loadDB(raw); return; }
+    if(raw != null && raw !== ''){ loadDB(raw); afterLoad(raw); return; }
     var legacy = null;
     try{ legacy = localStorage.getItem(STORE_KEY); }catch(e){}
-    if(legacy == null || mwriStore.backend() !== 'idb'){ loadDB(legacy); return; }
+    if(legacy == null || mwriStore.backend() !== 'idb'){ loadDB(legacy); afterLoad(legacy); return; }
     return mwriStore.set(STORE_KEY, legacy).then(function(){
       return mwriStore.get(STORE_KEY);
     }).then(function(check){
@@ -785,12 +793,12 @@ function loadDBAsync(){
         try{ localStorage.removeItem(STORE_KEY); }catch(e){}
         storageMigrated = 'نُقلت بيانات هذا التطبيق إلى IndexedDB وحُرّر ' + kbOf(legacy.length) + ' ك.ب من الحصة المشتركة.';
       }
-      loadDB(legacy);
-    }).catch(function(){ loadDB(legacy); });
+      loadDB(legacy); afterLoad(legacy);
+    }).catch(function(){ loadDB(legacy); afterLoad(legacy); });
   }).catch(function(e){
     var legacy = null;
     try{ legacy = localStorage.getItem(STORE_KEY); }catch(e2){}
-    loadDB(legacy);
+    loadDB(legacy); afterLoad(legacy);
   });
 }
 
@@ -903,7 +911,6 @@ function saveFailReason(e, chars){
   }
   return 'تعذر الحفظ (' + nm + '): ' + msg;
 }
-var lastSavedChars = 0;
 function saveDB(){
   var s;
   try{ s = JSON.stringify(DB, dbReplacer); }
@@ -4887,7 +4894,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-8';
+  var SW_VER = 'tired-canals-v8-9';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
