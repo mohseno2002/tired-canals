@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v8.6</span>
+  <span class="badge" id="ver">v8.7</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.6';
+var APP_VER = 'v8.7';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -690,7 +690,7 @@ function toggleTheme(){
 function loadDB(){
   try{
     var raw = localStorage.getItem(STORE_KEY);
-    if(raw){ DB = JSON.parse(raw); if(!DB.canals) DB.canals = []; }
+    if(raw){ DB = JSON.parse(raw); if(!DB.canals) DB.canals = []; stripDerived(); }
   }catch(e){ DB = {canals:[]}; }
   // First-run seeding with official imported data
   if((!DB.canals || DB.canals.length===0) && !DB.seeded){
@@ -754,9 +754,100 @@ function reloadOfficial(){
   pendingSeedMigration = false;
   saveDB(); refreshAll(); nav('list'); toast('تم تحميل '+canalCountLabel(SEED_DATA)+' رسمية');
 }
+/* ===== التخزين المحلى =====
+   الحقول التى تبدأ بشرطة سفلية (_diag/_hyd/_cost/_pri/_sev/_hri) نتائج حسابية
+   تُعاد عند كل إقلاع — حفظها كان يضاعف حجم التخزين ثلاث مرات ويملأ حصة المتصفح. */
+function stripDerived(){
+  (DB.canals||[]).forEach(function(c){
+    var ks = Object.keys(c);
+    for(var i=0;i<ks.length;i++){ if(ks[i].charAt(0)==='_') delete c[ks[i]]; }
+  });
+}
+function dbReplacer(k, v){ return (k && k.charAt(0)==='_') ? undefined : v; }
+var lastSaveError = '';
+var STORAGE_LIMIT_KB = 5120;   /* الحد الشائع الذى يمنحه المتصفح لكل نطاق */
+function kbOf(chars){ return Math.round(chars*2/1024); }   /* localStorage يخزّن بـUTF-16 */
+function storageUsage(){
+  var out = {items:[], total:0};
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      var v = localStorage.getItem(k) || '';
+      var chars = k.length + v.length;
+      out.items.push({key:k, chars:chars});
+      out.total += chars;
+    }
+  }catch(e){}
+  out.items.sort(function(a,b){ return b.chars - a.chars; });
+  return out;
+}
+function isOwnKey(k){
+  return (k===STORE_KEY || k===THEME_KEY || k===CLOUD_KEY || k===GANTT_KEY || k===GANTT_START_KEY);
+}
+function saveFailReason(e, chars){
+  var nm = (e && (e.name || e.code)) ? String(e.name || e.code) : 'خطأ غير معروف';
+  var msg = (e && e.message) ? String(e.message) : '';
+  var sig = nm + ' ' + msg;
+  if(/quota|exceed|NS_ERROR_DOM_QUOTA/i.test(sig)){
+    var u = storageUsage();
+    return 'تعذر الحفظ: حصة التخزين ممتلئة — الحفظ يحتاج ' + kbOf(chars) + ' ك.ب، والمستخدَم على هذا الرابط ' + kbOf(u.total) + ' ك.ب من نحو ' + STORAGE_LIMIT_KB + ' ك.ب يتقاسمها كل تطبيقاتك على نفس النطاق. افتح تبويب التقارير ← مساحة التخزين.';
+  }
+  if(/security|access|denied/i.test(sig)){
+    return 'تعذر الحفظ: المتصفح يمنع التخزين — التطبيق مفتوح من ملف محفوظ لا من رابط https، أو التصفّح فى وضع خاص. افتحه من رابط الموقع مباشرةً.';
+  }
+  return 'تعذر الحفظ (' + nm + '): ' + msg;
+}
 function saveDB(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
-  catch(e){ toast('تعذر الحفظ: المساحة ممتلئة'); }
+  var s;
+  try{ s = JSON.stringify(DB, dbReplacer); }
+  catch(e){ lastSaveError = 'تعذر تجهيز البيانات للحفظ: ' + (e.message||''); toast(lastSaveError); return false; }
+  try{
+    localStorage.setItem(STORE_KEY, s);
+    lastSaveError = '';
+    return true;
+  }catch(e){
+    lastSaveError = saveFailReason(e, s.length);
+    toast(lastSaveError);
+    try{ renderStorage(); }catch(e2){}
+    return false;
+  }
+}
+function dropStorageKey(k){
+  if(!confirm('حذف «' + k + '» نهائياً من تخزين المتصفح؟ لا يمكن التراجع.')) return;
+  try{ localStorage.removeItem(k); toast('حُذف ' + k); }
+  catch(e){ toast('تعذر الحذف: ' + (e.message||'')); }
+  renderStorage();
+}
+function renderStorage(){
+  var host = document.getElementById('data-status'); if(!host) return;
+  var el = document.getElementById('storage-panel');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'storage-panel';
+    el.style.marginTop = '12px';
+    if(host.parentNode) host.parentNode.insertBefore(el, host.nextSibling);
+  }
+  var u = storageUsage();
+  var mine = 0;
+  u.items.forEach(function(it){ if(isOwnKey(it.key)) mine += it.chars; });
+  var usedKb = kbOf(u.total);
+  var pct = Math.min(100, Math.round(usedKb / STORAGE_LIMIT_KB * 100));
+  var col = (pct>85) ? 'var(--bad)' : (pct>60 ? 'var(--sand)' : 'var(--navy)');
+  var h = '<div class="dd" style="font-weight:700;color:var(--navy);margin-bottom:6px">مساحة التخزين على المتصفح</div>';
+  if(lastSaveError) h += '<div class="note" style="color:#a8531a;font-size:12px"><b>' + esc(lastSaveError) + '</b></div>';
+  h += '<div class="kv"><span class="k">هذا التطبيق</span><span class="v">' + kbOf(mine) + ' ك.ب</span></div>';
+  h += '<div class="kv"><span class="k">كل التطبيقات على نفس الرابط</span><span class="v">' + usedKb + ' من ~' + STORAGE_LIMIT_KB + ' ك.ب</span></div>';
+  h += '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + col + '"></div></div>';
+  h += '<div style="height:6px"></div>';
+  u.items.slice(0,10).forEach(function(it){
+    var own = isOwnKey(it.key);
+    h += '<div class="kv"><span class="k" style="font-size:11px;word-break:break-all">' + esc(it.key) + (own ? ' <b>(هذا التطبيق)</b>' : '') + '</span>';
+    h += '<span class="v" style="white-space:nowrap">' + kbOf(it.chars) + ' ك.ب';
+    if(!own) h += ' <button class="btn btn-out btn-sm" onclick="dropStorageKey(\'' + esc(it.key) + '\')">حذف</button>';
+    h += '</span></div>';
+  });
+  h += '<div class="note">الحصة يمنحها المتصفح لكل <b>نطاق</b> لا لكل تطبيق، فكل تطبيقاتك المنشورة على نفس الرابط تتقاسمها. حذف مفتاح يخص تطبيقاً آخر يمسح بياناته المحلية هناك — صدّر نسخة احتياطية منه أولاً.</div>';
+  el.innerHTML = h;
 }
 
 /* ============================================================
@@ -4408,7 +4499,7 @@ function showView(v){
 function nav(v){
   if(v==='sol') renderSolLib();
   if(v==='info') renderFormsInfo();
-  if(v==='rep'){ renderDataStatus(); fillCloudForm(); }
+  if(v==='rep'){ renderDataStatus(); renderStorage(); fillCloudForm(); }
   if(v==='plan') renderPlan();
   if(v==='gantt') renderGantt();
   showView(v);
@@ -4684,7 +4775,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-6';
+  var SW_VER = 'tired-canals-v8-7';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
