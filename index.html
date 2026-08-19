@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v1.0</span>
+  <span class="badge" id="ver">v8.6</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -642,7 +642,7 @@ function seasonLabel(s){ return {summer:'صيفى',winter:'شتوى',nili:'ني�
 
 /* ===== 8-form field schema ===== */
 var SEED_DATA = [];
-var SEED_VER = 4;
+var SEED_VER = 5;
 
 var SEV_LABEL = {ok:'جيدة', warn:'متوسطة', bad:'سيئة', crit:'حرجة'};
 var SEV_ORDER = {crit:4, bad:3, warn:2, ok:1};
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.5';
+var APP_VER = 'v8.6';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -957,7 +957,7 @@ function buildAIContext(){
   lines.push('\nأهم الترع (مرتبة بالأولوية):');
   sorted.slice(0,15).forEach(function(c,i){
     var diag = (c._diag||diagnose(c)).map(function(d){return d.label;}).join('، ');
-    lines.push((i+1)+'. '+(c.f8_name||'بدون اسم')+' — '+(c.f8_admin||'')+' — شدة: '+(SEV_LABEL[c._sev||overallSeverity(c)]||'')+' — تكلفة: '+Math.round(c._cost||estimateCost(c)||0)+' ألف ج — مشاكل: '+(diag||'لا يوجد'));
+    lines.push((i+1)+'. '+(c.f8_name||'بدون اسم')+' — '+(c.f8_admin||'')+' — شدة: '+(SEV_LABEL[c._sev||overallSeverity(c)]||'')+' — تكلفة: '+fmtEGP(((c._cost||estimateCost(c))||{}).total||0)+' — مشاكل: '+(diag||'لا يوجد'));
   });
   return lines.join('\n');
 }
@@ -1018,7 +1018,7 @@ function aiLocalAnswer(rawQ){
     var k = 5; var mq = q.match(/(\d+)/); if(mq){ k=Math.max(1,Math.min(20,parseInt(mq[1]))); }
     var t = 'أعلى '+k+' ترع أولوية للتدخل فى '+scopeLbl+':\n';
     top.slice(0,k).forEach(function(c,i){
-      t += (i+1)+'. '+c.f8_name+' ('+(c.f8_admin||'')+') — '+SEV_LABEL[c._sev]+' — مؤشر '+Math.round(c._pri.total)+' — تكلفة '+fmt((c._cost&&c._cost.total)||0)+' ألف ج\n';
+      t += (i+1)+'. '+c.f8_name+' ('+(c.f8_admin||'')+') — '+SEV_LABEL[c._sev]+' — مؤشر '+Math.round(c._pri.total)+' — تكلفة '+fmtEGP((c._cost&&c._cost.total)||0)+'\n';
     });
     return t;
   }
@@ -4684,7 +4684,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-5';
+  var SW_VER = 'tired-canals-v8-6';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
