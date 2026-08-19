@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v9.2</span>
+  <span class="badge" id="ver">v9.3</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -399,9 +399,16 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div class="note" style="margin:6px 0 0">مساعد محلى ذكى — يعمل أوفلاين تماماً على جهازك، بدون إنترنت أو تكلفة، ولا يُرسل بياناتك لأى جهة خارجية.</div>
     </div></div>
 
-    <div class="sec-title">المزامنة السحابية (جوجل شيت)</div>
+    <div class="sec-title">المزامنة السحابية (جوجل شيت / فايربيز)</div>
     <div class="card"><div class="card-b">
       <div id="cloud-status" class="note" style="margin-top:0;margin-bottom:10px"></div>
+      <label class="fl">خلفية التخزين</label>
+      <select id="cloud-backend" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px">
+        <option value="sheets">جوجل شيت فقط (الوضع الحالى)</option>
+        <option value="dual">الاثنان معاً — كتابة مزدوجة (الشيت مصدر الحقيقة)</option>
+        <option value="rtdb">فايربيز فقط</option>
+      </select>
+      <div class="note">خطة الفطام: ابدأ <b>كتابة مزدوجة</b>، وشغّل <b>تقرير المطابقة</b> يومين حتى يخرج بصفر فروق، وبعدها فقط حوّل إلى <b>فايربيز فقط</b>. الرجوع فى أى لحظة باختيار الشيت من نفس القائمة.</div>
       <label class="fl">رابط الـWeb App (Apps Script)</label>
       <input id="cloud-url" type="text" placeholder="https://script.google.com/macros/s/.../exec">
       <label class="fl">مفتاح الأمان (API key)</label>
@@ -419,6 +426,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <button class="btn btn-sand" onclick="cloudSyncNow(false)">🔄 مزامنة الآن (رفع + جلب)</button>
       <div style="height:8px"></div>
       <button class="btn btn-out" onclick="cloudPullOnly()">⬇ جلب من السحابة فقط</button>
+      <div style="height:8px"></div>
+      <button class="btn btn-out" onclick="cloudParity()">🧪 تقرير المطابقة (شيت مقابل فايربيز)</button>
+      <div id="parity-out"></div>
       <div class="note">المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والسحابة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. الدمج <b>حقلاً حقلاً</b> (القيمة غير الفارغة الأحدث تفوز، ولا يُمحى حقل بقيمة فارغة)، والسجل السحابى الذى لا مقابل له محلياً <b>لا يُضاف تلقائياً</b> بل يُعرض لمراجعتك، والحذف المحلى يُرفع كشاهدة فلا يعود. وأى صفّ <b>أقدم من البيان الرسمى المثبَّت</b> يُرفض ويُطلب حذفه من الشيت — فلا يعيد جهازٌ متأخر بياناً قديماً.</div>
     </div></div>
 
@@ -659,7 +669,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v9.2';
+var APP_VER = 'v9.3';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -1087,14 +1097,14 @@ function addDemoCanal(){
    - push: يرفع ترعة (أو كذا) للسحابة. pull: يجلب من السحابة.
    ============================================================ */
 var CLOUD_KEY = 'tired_canals_cloud_cfg';
-var cloudCfg = { url:'', key:'', admin:'', user:'', auto:true };
+var cloudCfg = { url:'', key:'', admin:'', user:'', auto:true, backend:'sheets' };
 function loadCloudCfg(){
   try{ var raw=localStorage.getItem(CLOUD_KEY); if(raw) cloudCfg=Object.assign(cloudCfg, JSON.parse(raw)); }catch(e){}
 }
 function saveCloudCfg(){
   try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg)); }catch(e){}
 }
-function cloudConfigured(){ return !!(cloudCfg.url && cloudCfg.key); }
+function cloudConfigured(){ return (backendMode() === 'rtdb') ? true : sheetConfigured(); }
 
 /* ============================================================
    المزامنة السحابية (جوجل شيت عبر Apps Script)
@@ -1142,14 +1152,228 @@ function fetchJSON(url, opts){
   });
 }
 
-/* رفع ترع للسحابة (upsert). canals = مصفوفة سجلات. */
+
+/* ============================================================
+   خلفية فايربيز (RTDB REST) — مرحلة الفطام عن جوجل شيت (v9.3)
+   • نفس واجهة الشيت (push/pull) فالدمج ومنطق الشواهد لم يتغيّر حرفاً.
+   • كل سجل مفتاح مستقل تحت data/canals/<id>: لا حدّ خلية، ولا دمج
+     صفوف على الخادم — PATCH على المفتاح ذرّى بطبيعته.
+   • الحذف يُرسل null فى نفس الـPATCH (يطابق سلوك الشيت تماماً).
+   • _srv طابع الخادم: يبدأ بشرطة سفلية فلا يدخل الدمج ولا المقارنة.
+   • القواعد مفتوحة بقرار م. محسن — فالضمانة لقطة يومية دوّارة
+     (٧ أيام) وشواهد حذف، لا منعُ الكتابة.
+   ============================================================ */
+var RTDB_BASE  = 'https://ismailia-64500-default-rtdb.europe-west1.firebasedatabase.app';
+var RTDB_APP   = 'tired-canals';
+var RTDB_ROOT  = RTDB_BASE + '/mwri/apps/' + RTDB_APP;
+var RTDB_CHUNK = 100;
+var SNAP_KEY   = 'tired_canals_snap_day';
+var rtdbSkipped = [];
+var rtdbMetaErr = '';
+var rtdbSnapErr = '';
+
+function badKey(k){
+  k = String(k == null ? '' : k);
+  if(!k) return true;
+  var bad = '.$#[]/';
+  for(var i=0;i<bad.length;i++){ if(k.indexOf(bad.charAt(i)) >= 0) return true; }
+  return false;
+}
+function rtdbUrl(path, qs){ return RTDB_ROOT + '/' + path + '.json' + (qs ? ('?' + qs) : ''); }
+function rtdbReq(path, method, body, qs){
+  var opts = { method: method || 'GET' };
+  /* بلا Content-Type عمداً: يتجنّب preflight تماماً كما فى دفعة الشيت */
+  if(body !== undefined && body !== null) opts.body = JSON.stringify(body);
+  return fetchJSON(rtdbUrl(path, qs), opts);
+}
+function backendMode(){
+  var b = (cloudCfg && cloudCfg.backend) || 'sheets';
+  return (b === 'rtdb' || b === 'dual') ? b : 'sheets';
+}
+function usesSheet(){ return backendMode() !== 'rtdb'; }
+function usesRtdb(){ return backendMode() !== 'sheets'; }
+function sheetConfigured(){ return !!(cloudCfg.url && cloudCfg.key); }
+function backendLabel(){
+  var b = backendMode();
+  if(b === 'rtdb') return 'فايربيز (RTDB)';
+  if(b === 'dual') return 'الاثنان معاً — كتابة مزدوجة';
+  return 'جوجل شيت (Apps Script)';
+}
+
+/* رفع الترع لفايربيز: خريطة بالمعرّف + null للمحذوف، على دفعات */
+function rtdbPush(canals, tombs){
+  var map = {}, i;
+  rtdbSkipped = [];
+  (canals || []).forEach(function(c){
+    var rec = cleanRec(c);
+    if(badKey(rec.id)){ rtdbSkipped.push(String(rec.id)); return; }
+    rec._srv = {'.sv':'timestamp'};
+    map[rec.id] = rec;
+  });
+  (tombs || []).forEach(function(t){
+    var id = t && t.id;
+    if(badKey(id)) return;
+    map[id] = null;
+  });
+  var keys = Object.keys(map);
+  if(!keys.length) return Promise.resolve({ok:true, n:0});
+  var chunks = [];
+  for(i=0;i<keys.length;i+=RTDB_CHUNK){
+    var part = {};
+    keys.slice(i, i+RTDB_CHUNK).forEach(function(k){ part[k] = map[k]; });
+    chunks.push(part);
+  }
+  var step = function(n){
+    if(n >= chunks.length) return Promise.resolve(true);
+    return rtdbReq('data/canals','PATCH',chunks[n]).then(function(){ return step(n+1); });
+  };
+  return step(0).then(function(){
+    var tmap = {};
+    (tombs || []).forEach(function(t){ if(t && !badKey(t.id)) tmap[t.id] = t.deleted || Date.now(); });
+    if(!Object.keys(tmap).length) return true;
+    return rtdbReq('data/tombstones','PATCH',tmap);
+  }).then(function(){
+    return {ok:true, n:keys.length, skipped:rtdbSkipped.length};
+  });
+}
+
+/* جلب الترع من فايربيز بنفس شكل ردّ الشيت */
+function rtdbPull(){
+  return rtdbReq('data/canals','GET').then(function(obj){
+    var arr = [];
+    if(obj && typeof obj === 'object'){
+      Object.keys(obj).forEach(function(k){
+        var r = obj[k];
+        if(!r || typeof r !== 'object') return;
+        if(r._srv !== undefined) delete r._srv;
+        if(!r.id) r.id = k;
+        arr.push(r);
+      });
+    }
+    if(cloudCfg.admin) arr = arr.filter(function(c){ return (c.f8_admin || '') === cloudCfg.admin; });
+    return {ok:true, canals:arr};
+  });
+}
+
+/* ---- الموجّه: نفس الأسماء القديمة، وخلفية واحدة أو الاثنتان ---- */
 function cloudPush(canals, action){
+  action = action || 'upsert';
   if(!cloudConfigured()) return Promise.reject(new Error('لم تُضبط السحابة'));
+  if(usesSheet() && !sheetConfigured()) return Promise.reject(new Error('الخلفية تشمل جوجل شيت لكن الرابط أو المفتاح ناقص'));
+  var tombs = (action === 'upsert') ? getTombstones() : [];
+  var jobs = [];
+  if(usesSheet()) jobs.push(sheetPush(canals, action, tombs));
+  if(usesRtdb()) jobs.push(rtdbPush(canals, tombs));
+  if(!jobs.length) return Promise.reject(new Error('لم تُحدَّد خلفية تخزين'));
+  return Promise.all(jobs).then(function(res){ return res[0] || {ok:true}; });
+}
+function cloudPull(){
+  return (backendMode() === 'rtdb') ? rtdbPull() : sheetPull();
+}
+
+/* ---- ما بعد المزامنة: بطاقة المنظومة + اللقطة اليومية ---- */
+function rtdbAfterSync(){
+  try{ rtdbPublish(); }catch(e){ rtdbMetaErr = 'تعذّر نشر الملخّص: ' + (e.message || e); }
+  try{ rtdbSnapshot(); }catch(e){ rtdbSnapErr = 'تعذّرت اللقطة اليومية: ' + (e.message || e); }
+}
+function rtdbPublish(){
+  var list = DB.canals || [];
+  var cc = canalCounts(list);
+  var adm = {};
+  list.forEach(function(c){ var a = (c.f8_admin || '').trim(); if(a) adm[a] = 1; });
+  var now = Date.now();
+  var card = { app:RTDB_APP, name:'سجل الترع المتعبة', type:'registry', version:APP_VER, lastSeen:now, updatedAt:now, src:RTDB_APP };
+  var sum = { kpis:{ 'الأحباس':cc.reaches, 'الترع':cc.units, 'الإدارات':Object.keys(adm).length, 'الزمام (فدان)':Math.round(sumZamDedup(list)) }, updatedAt:now, src:RTDB_APP };
+  var note = function(e){ rtdbMetaErr = 'تعذّر نشر بطاقة المنظومة: ' + (e.message || e); };
+  rtdbReq('meta','PATCH',card).then(function(){ rtdbMetaErr = ''; }).catch(note);
+  rtdbReq('summary','PATCH',sum).catch(note);
+  fetchJSON(RTDB_BASE + '/mwri/registry/' + RTDB_APP + '.json', {method:'PATCH', body: JSON.stringify(card)}).catch(note);
+}
+function snapDayKey(){
+  var d = new Date(), m = d.getMonth()+1, dd = d.getDate();
+  return d.getFullYear() + '-' + (m<10?'0':'') + m + '-' + (dd<10?'0':'') + dd;
+}
+function rtdbSnapshot(){
+  if(cloudCfg.admin) return;   /* جهاز مقصور على إدارة واحدة: لقطته ناقصة فلا تُكتب */
+  var day = snapDayKey(), last = '';
+  try{ last = localStorage.getItem(SNAP_KEY) || ''; }catch(e){}
+  if(last === day) return;
+  rtdbReq('data/backups','GET',null,'shallow=true').then(function(keys){
+    var have = keys ? Object.keys(keys) : [];
+    if(have.indexOf(day) >= 0){ try{ localStorage.setItem(SNAP_KEY, day); }catch(e){} return true; }
+    var map = {};
+    (DB.canals || []).forEach(function(c){ var r = cleanRec(c); if(!badKey(r.id)) map[r.id] = r; });
+    if(!Object.keys(map).length) return true;
+    return rtdbReq('data/backups/' + day,'PUT',map).then(function(){
+      try{ localStorage.setItem(SNAP_KEY, day); }catch(e){}
+      rtdbSnapErr = '';
+      have.push(day); have.sort();
+      var drop = have.slice(0, Math.max(0, have.length - 7));
+      var step = function(i){
+        if(i >= drop.length) return true;
+        return rtdbReq('data/backups/' + drop[i],'DELETE').then(function(){ return step(i+1); });
+      };
+      return step(0);
+    });
+  }).catch(function(e){ rtdbSnapErr = 'تعذّرت اللقطة اليومية: ' + (e.message || e); });
+}
+
+/* ---- تقرير المطابقة: الشيت مقابل فايربيز (بوابة الانتقال) ---- */
+function normVal(v){
+  if(v === undefined || v === null) return '';
+  if(typeof v === 'object') return JSON.stringify(v);
+  return String(v).trim();
+}
+function recDiff(a, b){
+  var keys = {}, out = [];
+  Object.keys(a).forEach(function(k){ if(k.charAt(0) !== '_') keys[k] = 1; });
+  Object.keys(b).forEach(function(k){ if(k.charAt(0) !== '_') keys[k] = 1; });
+  Object.keys(keys).forEach(function(k){ if(normVal(a[k]) !== normVal(b[k])) out.push(k); });
+  return out;
+}
+function cloudParity(){
+  var out = document.getElementById('parity-out');
+  var show = function(h){ if(out) out.innerHTML = h; };
+  if(!sheetConfigured()){ show('<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>اضبط رابط الشيت ومفتاحه أولاً — المطابقة تقارن المصدرين معاً.</div>'); return; }
+  show('<div class=\u0022note\u0022>جارٍ المطابقة...</div>');
+  Promise.all([ sheetPull(), rtdbPull() ]).then(function(r){
+    var A = {}, B = {}, onlyA = [], onlyB = [], diff = [], tally = {};
+    (((r[0]||{}).canals)||[]).forEach(function(c){ if(c && c.id) A[c.id] = c; });
+    (((r[1]||{}).canals)||[]).forEach(function(c){ if(c && c.id) B[c.id] = c; });
+    Object.keys(A).forEach(function(id){
+      if(!B[id]){ onlyA.push(id); return; }
+      var f = recDiff(A[id], B[id]);
+      if(f.length){ diff.push({id:id, f:f}); f.forEach(function(k){ tally[k] = (tally[k]||0) + 1; }); }
+    });
+    Object.keys(B).forEach(function(id){ if(!A[id]) onlyB.push(id); });
+    var h = '<div class=\u0022note\u0022 style=\u0022margin-top:8px\u0022><b>تقرير المطابقة</b> — الشيت: <b>' + Object.keys(A).length +
+            '</b> سجلاً · فايربيز: <b>' + Object.keys(B).length + '</b> سجلاً</div>';
+    if(!onlyA.length && !onlyB.length && !diff.length){
+      h += '<div class=\u0022note\u0022 style=\u0022color:#1f7a4d\u0022><b>✓ صفر فروق — المصدران متطابقان، والقلب لفايربيز آمن.</b></div>';
+    } else {
+      if(onlyA.length) h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>فى الشيت وليس فى فايربيز: <b>' + onlyA.length + '</b> — ' + esc(onlyA.slice(0,6).join('، ')) + '</div>';
+      if(onlyB.length) h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>فى فايربيز وليس فى الشيت: <b>' + onlyB.length + '</b> — ' + esc(onlyB.slice(0,6).join('، ')) + '</div>';
+      if(diff.length){
+        var top = Object.keys(tally).sort(function(x,y){ return tally[y] - tally[x]; }).slice(0,6);
+        h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>سجلات مختلفة: <b>' + diff.length + '</b> · أكثر الحقول اختلافاً: ' +
+             esc(top.map(function(k){ return k + ' (' + tally[k] + ')'; }).join('، ')) + '</div>';
+        h += '<div class=\u0022note\u0022>مثال: <b>' + esc(diff[0].id) + '</b> → ' + esc(diff[0].f.slice(0,8).join('، ')) + '</div>';
+      }
+      h += '<div class=\u0022note\u0022>اختلاف <b>updated</b> وحده يعنى أن أحد الطرفين لم يستقبل آخر رفع — كرّر المزامنة ثم أعد المطابقة.</div>';
+    }
+    show(h);
+  }).catch(function(e){
+    show('<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>تعذّرت المطابقة: ' + esc(String(e.message || e)) + '</div>');
+  });
+}
+
+/* رفع ترع لجوجل شيت (upsert). canals = مصفوفة سجلات. */
+function sheetPush(canals, action, tombs){
   action = action || 'upsert';
   var payload = {
     key: cloudCfg.key, action: action, user: cloudCfg.user||'',
     canals: (canals||[]).map(cleanRec),
-    tombstones: (action === 'upsert') ? getTombstones() : []
+    tombstones: tombs || []
   };
   return fetchJSON(cloudCfg.url, {
     method:'POST',
@@ -1161,9 +1385,9 @@ function cloudPush(canals, action){
   });
 }
 
-/* جلب الترع من السحابة. لو admin مضبوط، يجلب إدارته فقط. */
-function cloudPull(){
-  if(!cloudConfigured()) return Promise.reject(new Error('لم تُضبط السحابة'));
+/* جلب الترع من جوجل شيت. لو admin مضبوط، يجلب إدارته فقط. */
+function sheetPull(){
+  if(!sheetConfigured()) return Promise.reject(new Error('لم يُضبط رابط الشيت'));
   var u = cloudCfg.url + '?key=' + encodeURIComponent(cloudCfg.key);
   if(cloudCfg.admin) u += '&admin=' + encodeURIComponent(cloudCfg.admin);
   return fetchJSON(u);
@@ -1275,6 +1499,7 @@ function cloudSyncNow(silent){
     } else {
       throw new Error((res && res.error) || 'الردّ بلا بيانات — تحقق من المفتاح والرابط');
     }
+    try{ if(usesRtdb()) rtdbAfterSync(); }catch(e){}
     try{ renderCloudStatus(); }catch(e){}
   }).catch(function(err){
     lastCloudError = 'تعذّرت المزامنة: ' + (err.message || err);
@@ -1302,6 +1527,7 @@ function saveCloudSettings(){
   cloudCfg.admin = (document.getElementById('cloud-admin')||{}).value.trim();
   cloudCfg.user = (document.getElementById('cloud-user')||{}).value.trim();
   cloudCfg.auto = !!(document.getElementById('cloud-auto')||{}).checked;
+  cloudCfg.backend = ((document.getElementById('cloud-backend')||{}).value) || 'sheets';
   saveCloudCfg();
   renderCloudStatus();
   toast('تم حفظ إعدادات السحابة');
@@ -1309,6 +1535,11 @@ function saveCloudSettings(){
 function renderCloudStatus(){
   var el = document.getElementById('cloud-status'); if(!el) return;
   var extra = '';
+  extra += '<div class=\u0022note\u0022 style=\u0022margin-top:0\u0022><b>خلفية التخزين:</b> ' + esc(backendLabel()) +
+           (usesRtdb() ? (' · المسار mwri/apps/' + esc(RTDB_APP)) : '') + '</div>';
+  if(rtdbSkipped && rtdbSkipped.length) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + rtdbSkipped.length + ' سجلاً لم يُرفع لفايربيز: معرّفه يحمل محرفاً ممنوعاً فى المسار (. $ # [ ] /).</div>';
+  if(rtdbMetaErr) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + esc(rtdbMetaErr) + '</div>';
+  if(rtdbSnapErr) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + esc(rtdbSnapErr) + '</div>';
   var qn = DB.quarantine ? DB.quarantine.length : 0;
   if(baselineNote) extra += '<div class="note" style="color:#1f7a4d"><b>✓ ' + esc(baselineNote) + '</b></div>';
   if(qn){
@@ -1522,6 +1753,7 @@ function aiAsk(){
 function fillCloudForm(){
   var set=function(id,v){ var e=document.getElementById(id); if(e!=null) e.value=v||''; };
   set('cloud-url', cloudCfg.url); set('cloud-keyfield', cloudCfg.key);
+  var bsel = document.getElementById('cloud-backend'); if(bsel) bsel.value = backendMode();
   // build admin dropdown: من البيانات إن وُجدت، وإلا القائمة المعروفة
   var sel = document.getElementById('cloud-admin');
   if(sel){
@@ -5130,7 +5362,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v9-2';
+  var SW_VER = 'tired-canals-v9-3';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
