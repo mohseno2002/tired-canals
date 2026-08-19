@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v8.7</span>
+  <span class="badge" id="ver">v8.8</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -659,7 +659,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v8.7';
+var APP_VER = 'v8.8';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -687,9 +687,115 @@ function toggleTheme(){
   applyTheme(next);
 }
 
-function loadDB(){
+/* ============================================================
+   mwriStore — طبقة تخزين موحّدة فوق IndexedDB مع رجوع آمن
+   إلى localStorage. سبب وجودها: حصة localStorage نحو ٥ م.ب
+   **للنطاق كله** يتقاسمها كل تطبيقات mohseno2002.github.io،
+   فامتلأت. حصة IndexedDB نسبة من مساحة القرص فلا تُلامَس.
+   قابلة للنسخ حرفياً على أى تطبيق آخر: غيّر IDB_NAME فقط.
+   ============================================================ */
+var IDB_NAME = 'mwri_tired_canals';
+var IDB_STORE = 'kv';
+var mwriStore = (function(){
+  var idb = null, backend = 'ls', ready = null;
+  function init(){
+    if(ready) return ready;
+    ready = new Promise(function(res){
+      var settled = false;
+      function done(b){ if(settled) return; settled = true; backend = b; res(b); }
+      if(!window.indexedDB){ return done('ls'); }
+      var req;
+      try{ req = window.indexedDB.open(IDB_NAME, 1); }
+      catch(e){ return done('ls'); }
+      req.onupgradeneeded = function(){
+        try{
+          var d = req.result;
+          if(!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE);
+        }catch(e){}
+      };
+      req.onsuccess = function(){ idb = req.result; done('idb'); };
+      req.onerror   = function(){ done('ls'); };
+      req.onblocked = function(){ done('ls'); };
+      setTimeout(function(){ done('ls'); }, 4000);   /* لا نعلّق الإقلاع أبداً */
+    });
+    return ready;
+  }
+  function store(mode){ return idb.transaction(IDB_STORE, mode).objectStore(IDB_STORE); }
+  function get(k){
+    return new Promise(function(res, rej){
+      if(backend !== 'idb' || !idb){
+        try{ res(localStorage.getItem(k)); }catch(e){ rej(e); }
+        return;
+      }
+      try{
+        var r = store('readonly').get(k);
+        r.onsuccess = function(){ res(r.result == null ? null : String(r.result)); };
+        r.onerror   = function(){ rej(r.error || new Error('IndexedDB get failed')); };
+      }catch(e){ rej(e); }
+    });
+  }
+  function set(k, v){
+    return new Promise(function(res, rej){
+      if(backend !== 'idb' || !idb){
+        try{ localStorage.setItem(k, v); res(true); }catch(e){ rej(e); }
+        return;
+      }
+      try{
+        var t = idb.transaction(IDB_STORE, 'readwrite');
+        t.objectStore(IDB_STORE).put(v, k);
+        t.oncomplete = function(){ res(true); };
+        t.onerror    = function(){ rej(t.error || new Error('IndexedDB write failed')); };
+        t.onabort    = function(){ rej(t.error || new Error('IndexedDB write aborted')); };
+      }catch(e){ rej(e); }
+    });
+  }
+  function del(k){
+    return new Promise(function(res, rej){
+      if(backend !== 'idb' || !idb){
+        try{ localStorage.removeItem(k); res(true); }catch(e){ rej(e); }
+        return;
+      }
+      try{
+        var t = idb.transaction(IDB_STORE, 'readwrite');
+        t.objectStore(IDB_STORE).delete(k);
+        t.oncomplete = function(){ res(true); };
+        t.onerror    = function(){ rej(t.error || new Error('IndexedDB delete failed')); };
+      }catch(e){ rej(e); }
+    });
+  }
+  return {init:init, get:get, set:set, del:del, backend:function(){ return backend; }};
+})();
+
+/* ترحيل لمرة واحدة: ينقل المفتاح من localStorage إلى IndexedDB،
+   يقرأه للتحقّق من المطابقة حرفاً بحرف، ثم يمسح القديم — فتتحرر
+   حصة النطاق المشتركة. أى فشل فى التحقق يعنى: لا يُمسح شىء. */
+var storageMigrated = '';
+function loadDBAsync(){
+  return mwriStore.init().then(function(){
+    return mwriStore.get(STORE_KEY);
+  }).then(function(raw){
+    if(raw != null && raw !== ''){ loadDB(raw); return; }
+    var legacy = null;
+    try{ legacy = localStorage.getItem(STORE_KEY); }catch(e){}
+    if(legacy == null || mwriStore.backend() !== 'idb'){ loadDB(legacy); return; }
+    return mwriStore.set(STORE_KEY, legacy).then(function(){
+      return mwriStore.get(STORE_KEY);
+    }).then(function(check){
+      if(check === legacy){
+        try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+        storageMigrated = 'نُقلت بيانات هذا التطبيق إلى IndexedDB وحُرّر ' + kbOf(legacy.length) + ' ك.ب من الحصة المشتركة.';
+      }
+      loadDB(legacy);
+    }).catch(function(){ loadDB(legacy); });
+  }).catch(function(e){
+    var legacy = null;
+    try{ legacy = localStorage.getItem(STORE_KEY); }catch(e2){}
+    loadDB(legacy);
+  });
+}
+
+function loadDB(raw){
   try{
-    var raw = localStorage.getItem(STORE_KEY);
     if(raw){ DB = JSON.parse(raw); if(!DB.canals) DB.canals = []; stripDerived(); }
   }catch(e){ DB = {canals:[]}; }
   // First-run seeding with official imported data
@@ -797,20 +903,20 @@ function saveFailReason(e, chars){
   }
   return 'تعذر الحفظ (' + nm + '): ' + msg;
 }
+var lastSavedChars = 0;
 function saveDB(){
   var s;
   try{ s = JSON.stringify(DB, dbReplacer); }
   catch(e){ lastSaveError = 'تعذر تجهيز البيانات للحفظ: ' + (e.message||''); toast(lastSaveError); return false; }
-  try{
-    localStorage.setItem(STORE_KEY, s);
-    lastSaveError = '';
-    return true;
-  }catch(e){
+  lastSavedChars = s.length;
+  mwriStore.set(STORE_KEY, s).then(function(){
+    if(lastSaveError){ lastSaveError = ''; try{ renderStorage(); }catch(e2){} }
+  }).catch(function(e){
     lastSaveError = saveFailReason(e, s.length);
     toast(lastSaveError);
     try{ renderStorage(); }catch(e2){}
-    return false;
-  }
+  });
+  return true;
 }
 function dropStorageKey(k){
   if(!confirm('حذف «' + k + '» نهائياً من تخزين المتصفح؟ لا يمكن التراجع.')) return;
@@ -830,13 +936,17 @@ function renderStorage(){
   var u = storageUsage();
   var mine = 0;
   u.items.forEach(function(it){ if(isOwnKey(it.key)) mine += it.chars; });
+  var onIdb = (mwriStore.backend() === 'idb');
+  if(onIdb) mine += lastSavedChars;
   var usedKb = kbOf(u.total);
   var pct = Math.min(100, Math.round(usedKb / STORAGE_LIMIT_KB * 100));
   var col = (pct>85) ? 'var(--bad)' : (pct>60 ? 'var(--sand)' : 'var(--navy)');
   var h = '<div class="dd" style="font-weight:700;color:var(--navy);margin-bottom:6px">مساحة التخزين على المتصفح</div>';
   if(lastSaveError) h += '<div class="note" style="color:#a8531a;font-size:12px"><b>' + esc(lastSaveError) + '</b></div>';
-  h += '<div class="kv"><span class="k">هذا التطبيق</span><span class="v">' + kbOf(mine) + ' ك.ب</span></div>';
-  h += '<div class="kv"><span class="k">كل التطبيقات على نفس الرابط</span><span class="v">' + usedKb + ' من ~' + STORAGE_LIMIT_KB + ' ك.ب</span></div>';
+  if(storageMigrated) h += '<div class="note" style="color:#1f7a4d;font-size:12px"><b>✓ ' + esc(storageMigrated) + '</b></div>';
+  h += '<div class="kv"><span class="k">محرّك تخزين هذا التطبيق</span><span class="v">' + (onIdb ? 'IndexedDB (حصة كبيرة)' : 'localStorage (حصة ~5 م.ب مشتركة)') + '</span></div>';
+  h += '<div class="kv"><span class="k">هذا التطبيق</span><span class="v">' + kbOf(mine) + ' ك.ب' + (onIdb ? ' (خارج الحصة المشتركة)' : '') + '</span></div>';
+  h += '<div class="kv"><span class="k">المستهلَك من الحصة المشتركة</span><span class="v">' + usedKb + ' من ~' + STORAGE_LIMIT_KB + ' ك.ب</span></div>';
   h += '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + col + '"></div></div>';
   h += '<div style="height:6px"></div>';
   u.items.slice(0,10).forEach(function(it){
@@ -846,7 +956,7 @@ function renderStorage(){
     if(!own) h += ' <button class="btn btn-out btn-sm" onclick="dropStorageKey(\'' + esc(it.key) + '\')">حذف</button>';
     h += '</span></div>';
   });
-  h += '<div class="note">الحصة يمنحها المتصفح لكل <b>نطاق</b> لا لكل تطبيق، فكل تطبيقاتك المنشورة على نفس الرابط تتقاسمها. حذف مفتاح يخص تطبيقاً آخر يمسح بياناته المحلية هناك — صدّر نسخة احتياطية منه أولاً.</div>';
+  h += '<div class="note">حصة localStorage يمنحها المتصفح لكل <b>نطاق</b> لا لكل تطبيق، فكل تطبيقاتك على نفس الرابط تتقاسمها. هذا التطبيق خرج منها إلى IndexedDB، والمفاتيح أعلاه لتطبيقاتك الأخرى. حذف أى منها يمسح بيانات ذلك التطبيق على هذا الجهاز — صدّر نسخة احتياطية منه أولاً.</div>';
   el.innerHTML = h;
 }
 
@@ -4697,7 +4807,6 @@ try{
 document.getElementById('ver').textContent = APP_VER;
 engineSelfTest();
 loadTheme();
-loadDB();
 loadGantt();
 loadCloudCfg();
 refreshAll();
@@ -4764,18 +4873,21 @@ function startApp(){
     return res.json();
   }).then(function(arr){
     if(!arr || !arr.length) throw new Error('ملف البيانات فارغ');
-    SEED_DATA = arr; done = true; bootApp();
+    SEED_DATA = arr; done = true;
+    loadDBAsync().then(bootApp);
   }).catch(function(err){
     if(done) return;
-    bootApp();
-    dataBadge(err.message || String(err), seedHint(err.message));
+    loadDBAsync().then(function(){
+      bootApp();
+      dataBadge(err.message || String(err), seedHint(err.message));
+    });
   });
 }
 startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v8-7';
+  var SW_VER = 'tired-canals-v8-8';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
