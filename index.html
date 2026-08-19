@@ -298,7 +298,7 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
 </head>
 <body>
 <div class="app-bar">
-  <span class="badge" id="ver">v9.5</span>
+  <span class="badge" id="ver">v10.0</span>
   <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="تبديل الثيم">🌙</button>
   <h1>سجل الترع المتعبة</h1>
   <div class="sub">قاعدة بيانات هندسية لحصر وتشخيص ومعالجة الترع المتعبة على مستوى الجمهورية</div>
@@ -399,20 +399,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div class="note" style="margin:6px 0 0">مساعد محلى ذكى — يعمل أوفلاين تماماً على جهازك، بدون إنترنت أو تكلفة، ولا يُرسل بياناتك لأى جهة خارجية.</div>
     </div></div>
 
-    <div class="sec-title">المزامنة السحابية (جوجل شيت / فايربيز)</div>
+    <div class="sec-title">المزامنة السحابية (فايربيز)</div>
     <div class="card"><div class="card-b">
       <div id="cloud-status" class="note" style="margin-top:0;margin-bottom:10px"></div>
-      <label class="fl">خلفية التخزين</label>
-      <select id="cloud-backend" onchange="setBackend(this.value)" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px">
-        <option value="sheets">جوجل شيت فقط (الوضع الحالى)</option>
-        <option value="dual">الاثنان معاً — كتابة مزدوجة (الشيت مصدر الحقيقة)</option>
-        <option value="rtdb">فايربيز فقط</option>
-      </select>
-      <div class="note">خطة الفطام: ابدأ <b>كتابة مزدوجة</b>، وشغّل <b>تقرير المطابقة</b> يومين حتى يخرج بصفر فروق، وبعدها فقط حوّل إلى <b>فايربيز فقط</b>. الرجوع فى أى لحظة باختيار الشيت من نفس القائمة.</div>
-      <label class="fl">رابط الـWeb App (Apps Script)</label>
-      <input id="cloud-url" type="text" placeholder="https://script.google.com/macros/s/.../exec">
-      <label class="fl">مفتاح الأمان (API key)</label>
-      <input id="cloud-keyfield" type="text" placeholder="نفس المفتاح فى كود Apps Script">
       <label class="fl">المحافظة/الإدارة (اختر من القائمة)</label>
       <select id="cloud-admin" style="width:100%;padding:9px;border-radius:9px;border:1px solid var(--line);font-family:Cairo;font-size:13px"></select>
       <label class="fl">اسمك (يُسجَّل مع كل تعديل)</label>
@@ -427,12 +416,9 @@ hr.sep{border:none;border-top:1px solid var(--line);margin:14px 0}
       <div style="height:8px"></div>
       <button class="btn btn-out" onclick="cloudPullOnly()">⬇ جلب من السحابة فقط</button>
       <div style="height:8px"></div>
-      <button class="btn btn-out" onclick="cloudParity()">🧪 تقرير المطابقة (شيت مقابل فايربيز)</button>
-      <div id="parity-out"></div>
-      <div style="height:8px"></div>
       <button class="btn btn-out" onclick="rtdbSnapList()">🗂 اللقطات اليومية (عرض واستعادة)</button>
       <div id="snap-out"></div>
-      <div class="note">المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والسحابة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. الدمج <b>حقلاً حقلاً</b> (القيمة غير الفارغة الأحدث تفوز، ولا يُمحى حقل بقيمة فارغة)، والسجل السحابى الذى لا مقابل له محلياً <b>لا يُضاف تلقائياً</b> بل يُعرض لمراجعتك، والحذف المحلى يُرفع كشاهدة فلا يعود. وأى صفّ <b>أقدم من البيان الرسمى المثبَّت</b> يُرفض ويُطلب حذفه من الشيت — فلا يعيد جهازٌ متأخر بياناً قديماً.</div>
+      <div class="note"><b>لا إعداد على أى جهاز</b> — القاعدة مضمَّنة فى التطبيق. المزامنة محلية-أولاً: بياناتك تُحفظ على الجهاز دائماً، والقاعدة نسخة مشتركة. كل مسؤول يضبط محافظته فيرى ترعها فقط. الدمج <b>حقلاً حقلاً</b> (القيمة غير الفارغة الأحدث تفوز، ولا يُمحى حقل بقيمة فارغة)، والسجل السحابى الذى لا مقابل له محلياً <b>لا يُضاف تلقائياً</b> بل يُعرض لمراجعتك، والحذف يُرفع كشاهدة فلا يعود. وأى سجل <b>أقدم من البيان الرسمى المثبَّت</b> يُرفض ويُحذف من القاعدة.</div>
     </div></div>
 
     <div class="sec-title">التقارير والتصدير</div>
@@ -672,7 +658,7 @@ var FORMS_INFO = [
 ];
 
 /* ===== State + persistence ===== */
-var APP_VER = 'v9.5';
+var APP_VER = 'v10.0';
 var STORE_KEY = 'tired_canals_db_v1';
 var DB = { canals: [] };
 var editId = null;
@@ -788,8 +774,8 @@ var lastSavedChars = 0;
    حارس الأساس المثبَّت
    البيان الرسمى (canals-data.json) هو الأساس، وطابعه الزمنى BASELINE_TS.
    أى سجل — محلى أو سحابى — ليس من الأساس وطابعه أقدم منه فهو بقايا بيان
-   سابق: يُرفع عن العرض ويُطلب حذفه من الشيت. الدرس المدفوع ثمنه فى لوحة
-   حياة كريمة: تفريغ الشيت وحده لا يكفى، لأن جهازاً لم يُحدَّث يسحب فيمتلئ
+   سابق: يُرفع عن العرض ويُحذف من القاعدة. الدرس المدفوع ثمنه فى لوحة
+   حياة كريمة: تفريغ المصدر وحده لا يكفى، لأن جهازاً لم يُحدَّث يسحب فيمتلئ
    ثم يُعيد الدفع — فالحكم يكون على **الصفّ نفسه** لا على ترتيب الأجهزة.
    ولا شىء يُمحى نهائياً: المرفوع يُحفظ فى حجر صحى قابل للاسترجاع.
    ============================================================ */
@@ -1094,23 +1080,28 @@ function addDemoCanal(){
 }
 
 /* ============================================================
-   CLOUD SYNC (Google Sheets via Apps Script web-app)
-   - Local-first: localStorage يفضل المصدر الأساسى، والسحابة مزامنة.
+   CLOUD SYNC (Firebase RTDB — جوجل شيت خرج من الخدمة فى v10.0)
+   - Local-first: التخزين المحلى هو المصدر الأساسى، والقاعدة مزامنة.
    - الإعدادات تتخزّن محلياً (الرابط + المفتاح + المحافظة + اسم المستخدم).
    - push: يرفع ترعة (أو كذا) للسحابة. pull: يجلب من السحابة.
    ============================================================ */
 var CLOUD_KEY = 'tired_canals_cloud_cfg';
-var cloudCfg = { url:'', key:'', admin:'', user:'', auto:true, backend:'sheets' };
+var cloudCfg = { admin:'', user:'', auto:true };
 function loadCloudCfg(){
   try{ var raw=localStorage.getItem(CLOUD_KEY); if(raw) cloudCfg=Object.assign(cloudCfg, JSON.parse(raw)); }catch(e){}
+  /* v10.0: خرج جوجل شيت من الخدمة — تُنظَّف بقاياه من الإعداد المحفوظ مرة واحدة */
+  if(cloudCfg.url !== undefined || cloudCfg.key !== undefined || cloudCfg.backend !== undefined || cloudCfg.mig !== undefined){
+    delete cloudCfg.url; delete cloudCfg.key; delete cloudCfg.backend; delete cloudCfg.mig;
+    saveCloudCfg();
+  }
 }
 function saveCloudCfg(){
   try{ localStorage.setItem(CLOUD_KEY, JSON.stringify(cloudCfg)); }catch(e){}
 }
-function cloudConfigured(){ return (backendMode() === 'rtdb') ? true : sheetConfigured(); }
+function cloudConfigured(){ return true; }   /* القاعدة مضمَّنة فى الملف — لا إعداد على أى جهاز */
 
 /* ============================================================
-   المزامنة السحابية (جوجل شيت عبر Apps Script)
+   المزامنة السحابية (Firebase RTDB)
    مبادئ حاكمة بعد مراجعة ١٩/٨/٢٠٢٦:
    • الدمج على مستوى الحقل لا استبدال السجل — فلا تُمحى بيانات
      الوزارة الرسمية بسجل سحابى أقدم محتوىً وأحدث طابعاً.
@@ -1141,9 +1132,9 @@ function fetchJSON(url, opts){
       if(!r.ok) throw new Error('HTTP ' + r.status + ' — ' + txt.slice(0,140));
       try{ return JSON.parse(txt); }
       catch(e){
-        /* Apps Script يردّ صفحة HTML عند خطأ أو عند طلب تسجيل دخول */
+        /* القاعدة تردّ JSON دائماً — فردّ HTML يعنى وسيطاً على الشبكة لا خطأ فى القاعدة */
         var hint = (txt.indexOf('<') === 0)
-          ? 'الخادم ردّ صفحة HTML لا JSON — الأغلب أن نشر الـWeb App ليس "Anyone" أو الرابط ليس /exec.'
+          ? 'الخادم ردّ صفحة HTML لا JSON — الأغلب شبكة تتطلب تسجيل دخول (واى فاى عام) أو انقطاع.'
           : 'الردّ ليس JSON سليماً.';
         throw new Error(hint + ' — ' + txt.slice(0,120));
       }
@@ -1157,11 +1148,11 @@ function fetchJSON(url, opts){
 
 
 /* ============================================================
-   خلفية فايربيز (RTDB REST) — مرحلة الفطام عن جوجل شيت (v9.3)
-   • نفس واجهة الشيت (push/pull) فالدمج ومنطق الشواهد لم يتغيّر حرفاً.
+   خلفية فايربيز (RTDB REST) — المصدر الوحيد منذ v10.0
+   • واجهة push/pull كما كانت، فالدمج ومنطق الشواهد لم يتغيّر حرفاً.
    • كل سجل مفتاح مستقل تحت data/canals/<id>: لا حدّ خلية، ولا دمج
      صفوف على الخادم — PATCH على المفتاح ذرّى بطبيعته.
-   • الحذف يُرسل null فى نفس الـPATCH (يطابق سلوك الشيت تماماً).
+   • الحذف يُرسل null فى نفس الـPATCH فيُمحى المفتاح ذرّياً.
    • _srv طابع الخادم: يبدأ بشرطة سفلية فلا يدخل الدمج ولا المقارنة.
    • القواعد مفتوحة بقرار م. محسن — فالضمانة لقطة يومية دوّارة
      (٧ أيام) وشواهد حذف، لا منعُ الكتابة.
@@ -1185,22 +1176,9 @@ function badKey(k){
 function rtdbUrl(path, qs){ return RTDB_ROOT + '/' + path + '.json' + (qs ? ('?' + qs) : ''); }
 function rtdbReq(path, method, body, qs){
   var opts = { method: method || 'GET' };
-  /* بلا Content-Type عمداً: يتجنّب preflight تماماً كما فى دفعة الشيت */
+  /* بلا Content-Type عمداً: يتجنّب preflight نهائياً */
   if(body !== undefined && body !== null) opts.body = JSON.stringify(body);
   return fetchJSON(rtdbUrl(path, qs), opts);
-}
-function backendMode(){
-  var b = (cloudCfg && cloudCfg.backend) || 'sheets';
-  return (b === 'rtdb' || b === 'dual') ? b : 'sheets';
-}
-function usesSheet(){ return backendMode() !== 'rtdb'; }
-function usesRtdb(){ return backendMode() !== 'sheets'; }
-function sheetConfigured(){ return !!(cloudCfg.url && cloudCfg.key); }
-function backendLabel(){
-  var b = backendMode();
-  if(b === 'rtdb') return 'فايربيز (RTDB)';
-  if(b === 'dual') return 'الاثنان معاً — كتابة مزدوجة';
-  return 'جوجل شيت (Apps Script)';
 }
 
 /* رفع الترع لفايربيز: خريطة بالمعرّف + null للمحذوف، على دفعات */
@@ -1240,7 +1218,7 @@ function rtdbPush(canals, tombs){
   });
 }
 
-/* جلب الترع من فايربيز بنفس شكل ردّ الشيت */
+/* جلب الترع من فايربيز */
 function rtdbPull(){
   return rtdbReq('data/canals','GET').then(function(obj){
     var arr = [];
@@ -1261,18 +1239,10 @@ function rtdbPull(){
 /* ---- الموجّه: نفس الأسماء القديمة، وخلفية واحدة أو الاثنتان ---- */
 function cloudPush(canals, action){
   action = action || 'upsert';
-  if(!cloudConfigured()) return Promise.reject(new Error('لم تُضبط السحابة'));
-  if(usesSheet() && !sheetConfigured()) return Promise.reject(new Error('الخلفية تشمل جوجل شيت لكن الرابط أو المفتاح ناقص'));
   var tombs = (action === 'upsert') ? getTombstones() : [];
-  var jobs = [];
-  if(usesSheet()) jobs.push(sheetPush(canals, action, tombs));
-  if(usesRtdb()) jobs.push(rtdbPush(canals, tombs));
-  if(!jobs.length) return Promise.reject(new Error('لم تُحدَّد خلفية تخزين'));
-  return Promise.all(jobs).then(function(res){ return res[0] || {ok:true}; });
+  return rtdbPush(canals, tombs);
 }
-function cloudPull(){
-  return (backendMode() === 'rtdb') ? rtdbPull() : sheetPull();
-}
+function cloudPull(){ return rtdbPull(); }
 
 /* ---- ما بعد المزامنة: بطاقة المنظومة + اللقطة اليومية ---- */
 function rtdbAfterSync(){
@@ -1322,21 +1292,12 @@ function rtdbSnapshot(){
 }
 
 
-/* ---- تثبيت اختيار الخلفية فور تغييره (لا ينتظر زرّ الحفظ) ---- */
-function setBackend(v){
-  cloudCfg.backend = (v === 'rtdb' || v === 'dual') ? v : 'sheets';
-  saveCloudCfg();
-  try{ renderCloudStatus(); }catch(e){}
-  toast('الخلفية الآن: ' + backendLabel() + ' — محفوظة');
-}
-
 /* ---- اللقطات اليومية: عرض واستعادة (ضمانة القواعد المفتوحة) ---- */
 function snapNote(h, col){
   return '<div class=\u0022note\u0022' + (col ? (' style=\u0022color:' + col + '\u0022') : '') + '>' + h + '</div>';
 }
 function rtdbSnapList(){
   var box = document.getElementById('snap-out'); if(!box) return;
-  if(!usesRtdb()){ box.innerHTML = snapNote('اللقطات تُكتب فى وضع فايربيز — غيّر خلفية التخزين أولاً.', '#a8531a'); return; }
   box.innerHTML = snapNote('جارٍ قراءة اللقطات...');
   rtdbReq('data/backups','GET',null,'shallow=true').then(function(keys){
     var ks = keys ? Object.keys(keys) : [];
@@ -1378,117 +1339,6 @@ function rtdbSnapRestore(day){
   });
 }
 
-/* ---- تقرير المطابقة: الشيت مقابل فايربيز (بوابة الانتقال) ---- */
-function normVal(v){
-  if(v === undefined || v === null) return '';
-  if(typeof v === 'object') return JSON.stringify(v);
-  return String(v).trim();
-}
-function recDiff(a, b){
-  var keys = {}, out = [];
-  Object.keys(a).forEach(function(k){ if(k.charAt(0) !== '_') keys[k] = 1; });
-  Object.keys(b).forEach(function(k){ if(k.charAt(0) !== '_') keys[k] = 1; });
-  Object.keys(keys).forEach(function(k){ if(normVal(a[k]) !== normVal(b[k])) out.push(k); });
-  return out;
-}
-var lastParity = null;
-function cloudParity(){
-  var out = document.getElementById('parity-out');
-  var show = function(h){ if(out) out.innerHTML = h; };
-  if(!sheetConfigured()){ show('<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>اضبط رابط الشيت ومفتاحه أولاً — المطابقة تقارن المصدرين معاً.</div>'); return; }
-  show('<div class=\u0022note\u0022>جارٍ المطابقة...</div>');
-  Promise.all([ sheetPull(), rtdbPull() ]).then(function(r){
-    var A = {}, B = {}, stale = [], missing = [], onlyB = [], diff = [], tally = {};
-    var seedIds = seedIdSet();
-    (((r[0]||{}).canals)||[]).forEach(function(c){ if(c && c.id) A[c.id] = c; });
-    (((r[1]||{}).canals)||[]).forEach(function(c){ if(c && c.id) B[c.id] = c; });
-    Object.keys(A).forEach(function(id){
-      if(!B[id]){
-        /* الصفّ السابق للبيان الرسمى ليس فرقاً — هو بقايا لا تُرحَّل أصلاً */
-        if(isPreBaseline(A[id], seedIds)) stale.push(id); else missing.push(id);
-        return;
-      }
-      var f = recDiff(A[id], B[id]);
-      if(f.length){ diff.push({id:id, f:f}); f.forEach(function(k){ tally[k] = (tally[k]||0) + 1; }); }
-    });
-    Object.keys(B).forEach(function(id){ if(!A[id]) onlyB.push(id); });
-    lastParity = {stale:stale, missing:missing, onlyB:onlyB, diff:diff.length};
-    var nA = Object.keys(A).length, nB = Object.keys(B).length, nL = (DB.canals||[]).length;
-    var h = '<div class=\u0022note\u0022 style=\u0022margin-top:8px\u0022><b>تقرير المطابقة</b> — الشيت: <b>' + nA +
-            '</b> · فايربيز: <b>' + nB + '</b> · جهازك: <b>' + nL + '</b></div>';
-    if(nB === 0){
-      h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022><b>فايربيز فارغ تماماً</b> — لم تُنفَّذ مزامنة واحدة بعد. اختر «خلفية التخزين = الاثنان معاً» ثم اضغط «مزامنة الآن»، وبعدها أعد هذا التقرير.</div>';
-    }
-    if(stale.length){
-      h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022><b>' + stale.length + ' صفّاً فى الشيت سابقاً للبيان الرسمى المثبَّت</b> — بقايا استيراد قديم (' +
-           esc(stale.slice(0,5).join('، ')) + '…). حارس الأساس يرفضها، و<b>لن تُرحَّل لفايربيز</b>، ووجودها ليس فرقاً يمنع الانتقال.</div>' +
-           '<div style=\u0022margin-top:6px\u0022><button class=\u0022btn btn-out btn-sm\u0022 onclick=\u0022wipeStaleSheet()\u0022>🧹 اطلب حذف الـ' + stale.length + ' صفاً من الشيت</button></div>';
-    }
-    if(!missing.length && !onlyB.length && !diff.length && nB > 0){
-      h += '<div class=\u0022note\u0022 style=\u0022color:#1f7a4d\u0022><b>✓ صفر فروق فى السجلات القابلة للترحيل — القلب لفايربيز آمن.</b></div>';
-    } else {
-      if(missing.length) h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>سجلات حديثة فى الشيت وليست فى فايربيز: <b>' + missing.length + '</b> — ' + esc(missing.slice(0,6).join('، ')) + '</div>';
-      if(onlyB.length) h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>فى فايربيز وليس فى الشيت: <b>' + onlyB.length + '</b> — ' + esc(onlyB.slice(0,6).join('، ')) + '</div>';
-      if(diff.length){
-        var top = Object.keys(tally).sort(function(x,y){ return tally[y] - tally[x]; }).slice(0,6);
-        h += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>سجلات مختلفة: <b>' + diff.length + '</b> · أكثر الحقول اختلافاً: ' +
-             esc(top.map(function(k){ return k + ' (' + tally[k] + ')'; }).join('، ')) + '</div>';
-        h += '<div class=\u0022note\u0022>مثال: <b>' + esc(diff[0].id) + '</b> → ' + esc(diff[0].f.slice(0,8).join('، ')) + '</div>';
-      }
-      h += '<div class=\u0022note\u0022>اختلاف <b>updated</b> وحده يعنى أن أحد الطرفين لم يستقبل آخر رفع — كرّر المزامنة ثم أعد المطابقة.</div>';
-    }
-    show(h);
-  }).catch(function(e){
-    show('<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>تعذّرت المطابقة: ' + esc(String(e.message || e)) + '</div>');
-  });
-}
-
-/* حذف صفوف ما قبل الأساس من الشيت بشواهد صريحة — لا يمسّ سجلاً من البيان الرسمى */
-function wipeStaleSheet(){
-  if(!lastParity || !lastParity.stale || !lastParity.stale.length){ toast('لا صفوف قديمة — شغّل تقرير المطابقة أولاً'); return; }
-  var ids = lastParity.stale, seedIds = seedIdSet(), safe = [];
-  ids.forEach(function(id){ if(!seedIds[id]) safe.push(id); });
-  if(safe.length !== ids.length){ toast('توقّف: بعض الصفوف من البيان الرسمى — لم يُحذف شىء'); return; }
-  if(!confirm('طلب حذف ' + safe.length + ' صفاً من الشيت (بقايا بيان قديم سابق للبيان الرسمى المثبَّت).\n\nلا يُمسّ أى سجل من البيان الرسمى، وسجل مراجعات جوجل شيت يحتفظ بنسخة.\n\nمتابعة؟')) return;
-  var now = Date.now();
-  var tombs = safe.map(function(id){ return {id:id, deleted:now}; });
-  toast('جارٍ إرسال ' + safe.length + ' شاهدة حذف...');
-  sheetPush([], 'upsert', tombs).then(function(){
-    toast('أُرسلت الشواهد — أعد تقرير المطابقة للتأكد');
-    cloudParity();
-  }).catch(function(e){
-    var m = 'تعذّر حذف الصفوف القديمة: ' + (e.message || e);
-    lastCloudError = m; toast(m);
-    try{ renderCloudStatus(); }catch(x){}
-  });
-}
-
-/* رفع ترع لجوجل شيت (upsert). canals = مصفوفة سجلات. */
-function sheetPush(canals, action, tombs){
-  action = action || 'upsert';
-  var payload = {
-    key: cloudCfg.key, action: action, user: cloudCfg.user||'',
-    canals: (canals||[]).map(cleanRec),
-    tombstones: tombs || []
-  };
-  return fetchJSON(cloudCfg.url, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'}, // text/plain يتجنّب preflight CORS
-    body: JSON.stringify(payload)
-  }).then(function(res){
-    if(res && res.ok === false) throw new Error((res.error||'رفض الخادم الرفع') + '');
-    return res;
-  });
-}
-
-/* جلب الترع من جوجل شيت. لو admin مضبوط، يجلب إدارته فقط. */
-function sheetPull(){
-  if(!sheetConfigured()) return Promise.reject(new Error('لم يُضبط رابط الشيت'));
-  var u = cloudCfg.url + '?key=' + encodeURIComponent(cloudCfg.key);
-  if(cloudCfg.admin) u += '&admin=' + encodeURIComponent(cloudCfg.admin);
-  return fetchJSON(u);
-}
-
 /* ---- شواهد الحذف: الحذف المحلى يُرفع بدل أن يعيده أول جلب ---- */
 function getTombstones(){
   if(!DB.tombstones) DB.tombstones = {};
@@ -1525,7 +1375,7 @@ function planMerge(remote){
   (remote||[]).forEach(function(rc){
     if(!rc || !rc.id) return;
     if(tomb[rc.id] && (Number(rc.updated)||0) <= tomb[rc.id]){ plan.skipDeleted++; return; }
-    /* بقايا بيان سابق للأساس: لا تدخل، ويُطلب حذف صفّها من الشيت */
+    /* بقايا بيان سابق للأساس: لا تدخل، وتُشهَد للحذف من القاعدة */
     if(isPreBaseline(rc, seedIds)){ plan.skipStale++; plan.wipe.push(rc.id); return; }
     if(byId[rc.id] != null){
       var merged = mergeRec(DB.canals[byId[rc.id]], rc);
@@ -1552,11 +1402,11 @@ function applyMerge(plan, withAdds){
 function cloudMerge(remote, silent){
   var plan = planMerge(remote);
   var r = applyMerge(plan, false);
-  /* شواهد حذف للصفوف السابقة للأساس — تُرفع فى المزامنة التالية فيُنظَّف الشيت */
+  /* شواهد حذف للسجلات السابقة للأساس — تُرفع فى المزامنة التالية فتُنظَّف القاعدة */
   plan.wipe.forEach(function(id){ addTombstone(id); });
   if(plan.wipe.length) saveDB();
   var msg = 'تم التحديث: ' + r.updated + ' سجلاً' + (plan.skipDeleted? ' · تُجوهل ' + plan.skipDeleted + ' محذوفاً محلياً':'')
-          + (plan.skipStale? ' · رُفض ' + plan.skipStale + ' صفّاً سابقاً للبيان الرسمى (سيُحذف من الشيت)':'');
+          + (plan.skipStale? ' · رُفض ' + plan.skipStale + ' سجلاً سابقاً للبيان الرسمى (سيُحذف من القاعدة)':'');
   if(plan.add.length){
     pendingRemote = plan.add;
     msg += ' · ' + plan.add.length + ' سجلاً سحابياً غير موجود محلياً بانتظار مراجعتك (تبويب التقارير)';
@@ -1581,7 +1431,6 @@ function rejectPendingRemote(){
 
 /* مزامنة كاملة: ارفع المحلى ثم اجلب السحابى وادمج. */
 function cloudSyncNow(silent){
-  if(!cloudConfigured()){ if(!silent) toast('اضبط رابط السحابة أولاً من الإعدادات'); return; }
   if(!silent) toast('جارٍ المزامنة...');
   var toSend = DB.canals;
   if(cloudCfg.admin) toSend = DB.canals.filter(function(c){ return (c.f8_admin||'')===cloudCfg.admin; });
@@ -1593,9 +1442,9 @@ function cloudSyncNow(silent){
       lastCloudError = '';
       cloudMerge(res.canals, silent);
     } else {
-      throw new Error((res && res.error) || 'الردّ بلا بيانات — تحقق من المفتاح والرابط');
+      throw new Error((res && res.error) || 'الردّ بلا بيانات من القاعدة');
     }
-    try{ if(usesRtdb()) rtdbAfterSync(); }catch(e){}
+    try{ rtdbAfterSync(); }catch(e){}
     try{ renderCloudStatus(); }catch(e){}
   }).catch(function(err){
     lastCloudError = 'تعذّرت المزامنة: ' + (err.message || err);
@@ -1605,7 +1454,6 @@ function cloudSyncNow(silent){
 }
 
 function cloudPullOnly(){
-  if(!cloudConfigured()){ toast('اضبط رابط السحابة أولاً'); return; }
   toast('جارٍ الجلب...');
   cloudPull().then(function(res){
     if(res && res.ok && res.canals){ lastCloudError=''; cloudMerge(res.canals, false); }
@@ -1618,12 +1466,9 @@ function cloudPullOnly(){
   });
 }
 function saveCloudSettings(){
-  cloudCfg.url = (document.getElementById('cloud-url')||{}).value.trim();
-  cloudCfg.key = (document.getElementById('cloud-keyfield')||{}).value.trim();
   cloudCfg.admin = (document.getElementById('cloud-admin')||{}).value.trim();
   cloudCfg.user = (document.getElementById('cloud-user')||{}).value.trim();
   cloudCfg.auto = !!(document.getElementById('cloud-auto')||{}).checked;
-  cloudCfg.backend = ((document.getElementById('cloud-backend')||{}).value) || 'sheets';
   saveCloudCfg();
   renderCloudStatus();
   toast('تم حفظ إعدادات السحابة');
@@ -1631,8 +1476,7 @@ function saveCloudSettings(){
 function renderCloudStatus(){
   var el = document.getElementById('cloud-status'); if(!el) return;
   var extra = '';
-  extra += '<div class=\u0022note\u0022 style=\u0022margin-top:0\u0022><b>خلفية التخزين:</b> ' + esc(backendLabel()) +
-           (usesRtdb() ? (' · المسار mwri/apps/' + esc(RTDB_APP)) : '') + '</div>';
+  extra += '<div class=\u0022note\u0022 style=\u0022margin-top:0\u0022><b>التخزين:</b> فايربيز · المسار mwri/apps/' + esc(RTDB_APP) + '</div>';
   if(rtdbSkipped && rtdbSkipped.length) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + rtdbSkipped.length + ' سجلاً لم يُرفع لفايربيز: معرّفه يحمل محرفاً ممنوعاً فى المسار (. $ # [ ] /).</div>';
   if(rtdbMetaErr) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + esc(rtdbMetaErr) + '</div>';
   if(rtdbSnapErr) extra += '<div class=\u0022note\u0022 style=\u0022color:#a8531a\u0022>' + esc(rtdbSnapErr) + '</div>';
@@ -1663,7 +1507,7 @@ function renderCloudStatus(){
 var KNOWN_ADMINS = ['الادارة العامة لرى أسيوط','الادارة العامة لرى السلام غرب','الادارة العامة لرى الغربية','الادارة العامة لرى النوبارية','الادارة العامة لرى غرب قنا','الادارة العامة لرى غرب كفر الشيخ','الادارة العامة لري الصالحية','الادارة العامة لري شرق الدقهلية','الادارة العامة لري شرق الشرقية','الادارة العامة لري غرب المنيا','الادارة العامة للموارد المائية والرى بالبحيرة','الادارة العامة للموارد المائية والري باسوان','الإدارة العامة لرى شرق قنا','الإدارة العامة لري سوهاج','الإدارة العامة لري شرق كفر الشيخ','الإدارة العامة لري غرب الدقهلية','الاسماعيلية','القليوبية','رى بنى سويف','ري النصر','ري شرق المنيا','ري غرب الشرقية','ري غرب الفيوم','شرق الفيوم'];
 
 /* ============================================================
-   المساعد الذكى (Gemini عبر Apps Script — المفتاح مخفى بالخادم)
+   المساعد الذكى — محلى بالكامل على الجهاز، بلا إنترنت ولا مفتاح ولا خادم
    ============================================================ */
 var aiHistory = [];
 /* يبنى ملخصاً رقمياً للبيانات لإرساله كسياق (يحترم فلتر المحافظة) */
@@ -1848,8 +1692,7 @@ function aiAsk(){
 
 function fillCloudForm(){
   var set=function(id,v){ var e=document.getElementById(id); if(e!=null) e.value=v||''; };
-  set('cloud-url', cloudCfg.url); set('cloud-keyfield', cloudCfg.key);
-  var bsel = document.getElementById('cloud-backend'); if(bsel) bsel.value = backendMode();
+
   // build admin dropdown: من البيانات إن وُجدت، وإلا القائمة المعروفة
   var sel = document.getElementById('cloud-admin');
   if(sel){
@@ -5458,7 +5301,7 @@ startApp();
 
 /* ===== Service worker (cache versioned) ===== */
 if('serviceWorker' in navigator){
-  var SW_VER = 'tired-canals-v9-5';
+  var SW_VER = 'tired-canals-v10-0';
   var swCode = 'var C="'+SW_VER+'";'+
     'self.addEventListener("install",function(e){self.skipWaiting();});'+
     'self.addEventListener("activate",function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){if(k!==C)return caches.delete(k);}));}).then(function(){return self.clients.claim();}));});'+
